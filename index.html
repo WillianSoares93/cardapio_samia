@@ -1107,14 +1107,17 @@
                         }
                     }
                     // Lógica específica para imageUrl em pizzas
-                    if (type === 'cardapio' && item.isPizza) {
+                    if (type === 'cardapio') {
                         const trimmedUrl = String(item.imageUrl || '').trim();
-                        if (trimmedUrl.length > 0 && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
-                            item.imageUrl = trimmedUrl;
-                        } else {
-                            item.imageUrl = defaultPizzaImage;
-                        }
+                            if (trimmedUrl.length > 0 && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
+                                item.imageUrl = trimmedUrl;
+                            } else if (item.isPizza) {
+                                 item.imageUrl = defaultPizzaImage;
+                            } else {
+                                item.imageUrl = ''; // sem imagem padrão para bebidas/sobremesas
+                            }
                     }
+
                     // Apenas adiciona se estiver disponível (para cardápio) ou ativo (para promoções)
                     // Para deliveryFees, adiciona todos os bairros
                     if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees') {
