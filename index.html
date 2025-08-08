@@ -822,7 +822,7 @@
         let isAddressInputVisible = false; // NOVO: Controla a visibilidade do modal de endereço
 
         // Imagem padrão para pizzas sem link na planilha
-        const defaultPizzaImage = 'https://upload.wikimedia.org/wikipedia/commons/9/91/Pizza-3007395.jpg';
+        const defaultImage = 'https://multilit.com.br/wp-content/uploads/2020/03/Produto-sem-foto.png';
 
         // Referências para os elementos DOM
         const orderSidebar = document.getElementById('orderSidebar');
@@ -1112,7 +1112,7 @@
                             if (trimmedUrl.length > 0 && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
                                 item.imageUrl = trimmedUrl;
                             } else if (item.isPizza) {
-                                 item.imageUrl = defaultPizzaImage;
+                                 item.imageUrl = defaultImage;
                             } else {
                                 item.imageUrl = ''; // sem imagem padrão para bebidas/sobremesas
                             }
@@ -1198,11 +1198,11 @@
                                     `;
                                 }
                                 
-                                const imageUrl = item.imageUrl || defaultPizzaImage; 
+                                const imageUrl = item.imageUrl || defaultImage; 
 
                                 itemHtml = `
                                     <div class="flavor-card bg-white rounded-xl overflow-hidden shadow-lg transition duration-300">
-                                        <img src="${imageUrl}" alt="Pizza de ${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='${defaultPizzaImage}';">
+                                        <img src="${imageUrl}" alt="Pizza de ${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='${defaultImage}';">
                                         <div class="p-6">
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
                                             <div class="flex justify-around items-start text-sm mb-4 w-full overflow-x-auto py-1">
@@ -1219,11 +1219,11 @@
                                     </div>
                                 `;
 							} else {
-								const imageUrl = item.imageUrl || defaultPizzaImage; // Use uma imagem genérica se preferir
+								const imageUrl = item.imageUrl || defaultImage; // Use uma imagem genérica se preferir
 
 							itemHtml = `
 								<div class="flavor-card bg-white rounded-xl overflow-hidden shadow-lg transition duration-300">
-									<img src="${imageUrl}" alt="${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='${defaultPizzaImage}';">
+									<img src="${imageUrl}" alt="${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='${defaultImage}';">
 										<div class="p-6">
 										<h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
 										<p class="text-gray-600 text-sm mb-4">${item.description}</p>
@@ -1231,13 +1231,13 @@
 											<span class="font-bold text-red-600 text-lg">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</span>
 											<button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
 											data-item-id="${item.id}">
-										Adicionar
-									</button>
-						</div>
-            </div>
-        </div>										
-    `;
-}
+												Adicionar
+											</button>
+										</div>
+								</div>
+						</div>										
+					`;
+				}
                             categoryItemsEl.insertAdjacentHTML('beforeend', itemHtml);
                         }
                     });
