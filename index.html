@@ -754,6 +754,13 @@
             </div>
             <div class="mb-6">
                 <label for="referencePointInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuote && i + 1 < line.length && line[i + 1] === '"') {
+                            currentField += '"';
+                            i++;
+                        } else {
+                            inQuote = !inQuote;
                     Ponto de Referência (Opcional):
                 </label>
                 <input type="text" id="referencePointInput" placeholder="Ex: Próximo à praça" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -1020,13 +1027,6 @@
                 let inQuote = false;
                 let currentField = '';
                 for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        if (inQuote && i + 1 < line.length && line[i + 1] === '"') {
-                            currentField += '"';
-                            i++;
-                        } else {
-                            inQuote = !inQuote;
                         }
                     } else if (char === ',' && !inQuote) {
                         values.push(currentField);
