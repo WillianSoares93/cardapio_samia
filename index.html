@@ -485,6 +485,78 @@
             padding: 10px;
             object-fit: cover;
         }
+        
+        /* Estilos para o modal de montagem de hambúrguer */
+        .burger-builder-modal {
+            max-width: 600px;
+        }
+        .ingredient-category {
+            margin-bottom: 24px;
+        }
+        .ingredient-category h4 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .ingredient-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9fafb;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #e5e7eb;
+        }
+        .ingredient-option:hover {
+            border-color: #dc2626;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+        .ingredient-option input[type="radio"],
+        .ingredient-option input[type="checkbox"] {
+            margin-right: 12px;
+            accent-color: #dc2626;
+        }
+        .ingredient-option label {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+        .ingredient-option .price {
+            font-weight: bold;
+            color: #dc2626;
+        }
+        .ingredient-option.selected {
+            background-color: #fee2e2;
+            border-color: #dc2626;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+        
+        .burger-summary {
+            background-color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .burger-summary h5 {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .burger-summary ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .burger-summary li {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
     </style>
 </head>
 <body>
@@ -603,6 +675,27 @@
             <div id="pizza-size-options" class="grid grid-cols-1 sm:grid-cols-3 gap-2 justify-items-center">
                 <!-- Opções de bairro serão carregadas via JS -->
             </div>
+        </div>
+    </div>
+    
+    <!-- NOVO: Modal de Montagem de Hambúrguer -->
+    <div id="burger-builder-modal" class="modal">
+        <div class="modal-content burger-builder-modal">
+            <span class="close-button" id="close-burger-builder-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Monte Seu Hambúrguer</h3>
+            
+            <div id="burger-ingredients-container" class="mb-4">
+                <!-- Seções de ingredientes serão carregadas aqui -->
+            </div>
+            
+            <div class="flex justify-between items-center bg-gray-100 p-4 rounded-lg mt-4">
+                <span class="text-lg font-bold">Total:</span>
+                <span id="burger-total-price" class="text-2xl font-bold text-red-600">R$ 0,00</span>
+            </div>
+            
+            <button id="add-custom-burger-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition w-full">
+                Adicionar ao Pedido
+            </button>
         </div>
     </div>
 
@@ -808,39 +901,33 @@
     </footer>
 
     <script>
-        // URLs das planilhas Google Sheets publicadas como CSV
-        const CARDAPIO_CSV_URL_REF = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=664943668&single=true&output=csv';
-        const PROMOCOES_CSV_URL_REF = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=600393470&single=true&output=csv'; 
-        const DELIVERY_FEES_CSV_URL_REF = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=1695668250&single=true&output=csv';
-
         // Variáveis globais
         let order = [];
-        let allMenuData = []; // Armazenará todos os itens do cardápio (pizzas e bebidas)
+        let allMenuData = [];
         let allPromotionsData = [];
-        let deliveryFeesData = []; // NOVO: Armazenará os dados de taxas de entrega
+        let deliveryFeesData = [];
+        let allBurgerIngredients = {};
         let isSelectingHalfPizza = false; 
         let isFirstHalfPromotional = false; 
         let deferredPrompt; 
         let selectedPaymentMethod = null; 
         let isCheckoutInitiated = false; 
         
-        // NOVO: Objeto para armazenar o endereço selecionado e sua taxa de entrega
         let selectedAddress = {
             bairro: null,
             rua: null,
             numero: null,
             referencia: null,
-            deliveryFee: 0.00 // Inicializa com 0, será atualizado dinamicamente
+            deliveryFee: 0.00
         };
-        let isAddressInputVisible = false; // NOVO: Controla a visibilidade do modal de endereço
 
-        // Imagem padrão para pizzas sem link na planilha
         const defaultImage = 'https://www.bakelitsul.com.br/Assets/img/sem-produto-detalhe.png';
+        const whatsappNumber = '5587996070638'; 
 
         // Referências para os elementos DOM
         const orderSidebar = document.getElementById('orderSidebar');
         const cartCount = document.getElementById('cartCount');
-        const emptyOrderMessage = document.getElementById('orderItems').querySelector('#emptyOrderMessage'); // Ajustado para pegar dentro de orderItems
+        const emptyOrderMessage = document.getElementById('orderItems').querySelector('#emptyOrderMessage');
         const messageModal = document.getElementById('message-modal');
         const closeMessageModalBtn = document.getElementById('close-message-modal');
         const okMessageModalBtn = document.getElementById('ok-message-modal');
@@ -852,9 +939,9 @@
         const promotionButton = document.getElementById('promotion-button'); 
         const cartButton = document.getElementById('cart-button'); 
         const subtotalEl = document.getElementById('subtotal');
-        const deliveryFeeDisplay = document.getElementById('deliveryFeeDisplay'); // NOVO: Elemento para a taxa de entrega dinâmica
+        const deliveryFeeDisplay = document.getElementById('deliveryFeeDisplay');
         const totalEl = document.getElementById('total');
-        const checkoutButton = document.getElementById('checkoutButton'); // Referência ao botão Finalizar Pedido
+        const checkoutButton = document.getElementById('checkoutButton');
 
         // Referências para o modal de seleção de pizza
         const pizzaOptionModal = document.getElementById('pizza-option-modal');
@@ -862,6 +949,13 @@
         const modalPizzaName = document.getElementById('modal-pizza-name');
         const modalPizzaDescription = document.getElementById('modal-pizza-description');
         const pizzaSizeOptions = document.getElementById('pizza-size-options');
+        
+        // NOVO: Referências para o modal de montagem de hambúrguer
+        const burgerBuilderModal = document.getElementById('burger-builder-modal');
+        const closeBurgerBuilderModalBtn = document.getElementById('close-burger-builder-modal');
+        const burgerIngredientsContainer = document.getElementById('burger-ingredients-container');
+        const burgerTotalPriceEl = document.getElementById('burger-total-price');
+        const addCustomBurgerBtn = document.getElementById('add-custom-burger-btn');
 
         // Referências para o novo modal de sugestão de bebidas
         const drinkSuggestionModal = document.getElementById('drink-suggestion-modal');
@@ -890,7 +984,7 @@
         const trocoTotalDisplay = document.getElementById('trocoTotalDisplay'); 
         const paymentModalTotal = document.getElementById('payment-modal-total'); 
 
-        // NOVO: Referências para elementos do modal de endereço
+        // Referências para elementos do modal de endereço
         const addressInputModal = document.getElementById('address-input-modal');
         const closeAddressModalBtn = document.getElementById('close-address-modal');
         const neighborhoodSelect = document.getElementById('neighborhoodSelect');
@@ -903,7 +997,6 @@
         const neighborhoodDisplay = document.getElementById('neighborhood-display');
         const referenceDisplay = document.getElementById('reference-display');
         const editAddressBtn = document.getElementById('editAddressBtn');
-        // NOVO: Referências para os novos elementos de taxa de entrega
         const informAddressBtn = document.getElementById('informAddressBtn');
         const editDeliveryAddressBtn = document.getElementById('editDeliveryAddressBtn');
 
@@ -918,9 +1011,7 @@
             { slices: 6, label: '6 Fatias', priceKey: 'price6Slices' },
             { slices: 8, label: '8 Fatias', priceKey: 'basePrice' } 
         ];
-
-        const whatsappNumber = '5587996070638'; 
-
+        
         // Funções de controle de modais e sidebar
         function toggleOrderSidebar() {
             orderSidebar.classList.toggle('translate-x-full');
@@ -928,7 +1019,7 @@
 
             if (orderSidebar.classList.contains('translate-x-0')) {
                 promotionButton.style.display = 'none';
-                orderSidebar.scrollTop = orderSidebar.scrollHeight; // Rola para o final ao abrir
+                orderSidebar.scrollTop = orderSidebar.scrollHeight;
             } else {
                 updatePromotionButtonVisibility();
             }
@@ -941,9 +1032,10 @@
         }
         
         function showMessageModal(message, onOkCallback = null) {
-            console.log('DEBUG: showMessageModal chamado com:', message); // Log
+            console.log('DEBUG: showMessageModal chamado com:', message);
             messageModalText.textContent = message;
             messageModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
 
             okMessageModalBtn.removeEventListener('click', hideMessageModal);
             closeMessageModalBtn.removeEventListener('click', hideMessageModal);
@@ -955,7 +1047,7 @@
                     onOkCallback();
                 };
                 okMessageModalBtn.addEventListener('click', specificAction);
-                closeMessageModalBtn.addEventListener('click', specificAction); 
+                closeMessageModalBtn.addEventListener('click', specificAction);
                 messageModal.onclick = (event) => {
                     if (event.target === messageModal) {
                         specificAction();
@@ -973,19 +1065,16 @@
         }
 
         function hideMessageModal() {
-            console.log('DEBUG: hideMessageModal chamado.'); // Log
             messageModal.style.display = 'none';
+            updatePromotionButtonVisibility();
         }
 
-        // NOVO: Função para resetar o estado de seleção de meia pizza
         function resetHalfPizzaSelection() {
-            console.log('DEBUG: resetHalfPizzaSelection chamado. isSelectingHalfPizza:', isSelectingHalfPizza); // Log
             if (isSelectingHalfPizza && firstHalfPizza) {
                 const pendingHalfIndex = order.findIndex(orderItem => orderItem.id === 'pending-half-pizza');
                 if (pendingHalfIndex > -1) {
                     order.splice(pendingHalfIndex, 1);
                     updateOrderDisplay(); 
-                    console.log('DEBUG: Meia pizza pendente removida do pedido.'); // Log
                 }
                 firstHalfPizza = null;
                 isSelectingSecondHalf = false;
@@ -994,23 +1083,32 @@
                 toggleAddItemButtons(true);
                 toggleCategoryButtons(true);
                 showMessageModal('Seleção de meia pizza cancelada.');
-                console.log('DEBUG: Estado de meia pizza resetado.'); // Log
             }
         }
 
         closePizzaOptionModalBtn.addEventListener('click', function() {
-            console.log('DEBUG: Fechando modal de opção de pizza via botão X.'); // Log
             pizzaOptionModal.style.display = 'none';
             updatePromotionButtonVisibility(); 
-            resetHalfPizzaSelection(); // Chama o reset ao fechar o modal
+            resetHalfPizzaSelection();
         });
 
         window.addEventListener('click', function(event) {
             if (event.target == pizzaOptionModal) {
-                console.log('DEBUG: Fechando modal de opção de pizza clicando fora.'); // Log
                 pizzaOptionModal.style.display = 'none';
                 updatePromotionButtonVisibility(); 
-                resetHalfPizzaSelection(); // Chama o reset ao clicar fora do modal
+                resetHalfPizzaSelection();
+            }
+        });
+
+        closeBurgerBuilderModalBtn.addEventListener('click', () => {
+            burgerBuilderModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target == burgerBuilderModal) {
+                burgerBuilderModal.style.display = 'none';
+                updatePromotionButtonVisibility();
             }
         });
 
@@ -1018,9 +1116,8 @@
             return ''; 
         }
 
-        // Função para parsear dados CSV (agora mais genérica para diferentes tipos de dados)
         function parseCsvData(csvText, type) {
-            console.log(`DEBUG: parseCsvData para ${type} - CSV Bruto (primeiras 100 chars):`, csvText.substring(0, 100)); // Log
+            console.log(`DEBUG: parseCsvData para ${type} - CSV Bruto (primeiras 100 chars):`, csvText.substring(0, 100));
             const lines = csvText.split('\n').filter(line => line.trim() !== '');
 
             if (lines.length === 0) {
@@ -1072,6 +1169,7 @@
                     case 'Preço 4 fatias': return 'price4Slices';
                     case 'Categoria': return 'category';
                     case 'É Pizza? (SIM/NÃO)': return 'isPizza';
+                    case 'É Montável? (SIM/NÃO)': return 'isCustomizable';
                     case 'Disponível (SIM/NÃO)': return 'available'; 
                     case 'Imagem': return 'imageUrl'; 
                     // Headers para Promoções
@@ -1081,11 +1179,20 @@
                     case 'Preco Promocional': return 'promoPrice';
                     case 'ID Item Aplicavel': return 'itemId';
                     case 'Ativo (SIM/NAO)': return 'active';
-                    // Headers para Taxas de Entrega - CORRIGIDO O MAPEAMENTO
-                    case 'Bairros': return 'neighborhood'; // CORREÇÃO AQUI: De 'Bairro' para 'Bairros'
+                    // Headers para Taxas de Entrega
+                    case 'Bairros': return 'neighborhood';
                     case 'Valor Frete': return 'deliveryFee';
+                    // NOVO: Headers para Ingredientes de Hambúrguer
+                    case 'ID Intem': return 'id';
+                    case 'Ingredientes': return 'name';
+                    case 'Preço': return 'price';
+                    case 'Categoria': return 'category';
+                    case 'Seleção Única': return 'isSingleChoice';
+                    case 'Limite': return 'limit';
+                    case 'É Obrigatório?(SIM/NÃO)': return 'isRequired';
+                    case 'Disponível': return 'available'; 
                     default: 
-                        console.warn(`DEBUG: Header CSV desconhecido encontrado para ${type}: "${cleanedHeader}"`); // Log para depuração
+                        console.warn(`DEBUG: Header CSV desconhecido encontrado para ${type}: "${cleanedHeader}"`);
                         return cleanedHeader.replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, (match) => match.toLowerCase());
                 }
             });
@@ -1099,48 +1206,225 @@
                     for (let j = 0; j < mappedHeaders.length; j++) {
                         let headerKey = mappedHeaders[j];
                         let value = rowValues[j];
-
-                        // Tratamento específico para campos críticos para evitar 'undefined'
-                        if (headerKey === 'neighborhood' && (value === undefined || value === null || value.trim() === '')) {
-                            console.warn(`DEBUG: Bairro vazio ou indefinido na linha ${i + 1} para ${type}: "${line}"`);
-                            value = ''; // Garante que é uma string vazia, não undefined
+                        
+                        if (['neighborhood', 'name', 'category'].includes(headerKey) && (value === undefined || value === null || value.trim() === '')) {
+                            value = '';
                         }
-                        if (headerKey === 'deliveryFee' && (value === undefined || value === null || value.trim() === '')) {
-                            console.warn(`DEBUG: Valor Frete vazio ou indefinido na linha ${i + 1} para ${type}: "${line}"`);
-                            value = '0.00'; // Default para 0 se ausente
-                        }
-
-                        if (['basePrice', 'price6Slices', 'price4Slices', 'promoPrice', 'deliveryFee'].includes(headerKey)) { // Adicionado 'deliveryFee'
+                        if (['basePrice', 'price6Slices', 'price4Slices', 'promoPrice', 'deliveryFee', 'price'].includes(headerKey)) {
                             const parsedValue = parseFloat(String(value).replace(',', '.'));
                             item[headerKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                        } else if (['isPizza', 'available', 'active'].includes(headerKey)) {
+                        } else if (headerKey === 'limit') {
+                            const parsedValue = parseInt(value, 10);
+                            item[headerKey] = isNaN(parsedValue) ? Infinity : parsedValue;
+                        }
+                        else if (['isPizza', 'available', 'active', 'isCustomizable', 'isSingleChoice', 'isRequired'].includes(headerKey)) {
                             item[headerKey] = value.toUpperCase() === 'SIM';
                         } else {
                             item[headerKey] = value;
                         }
                     }
-                    // NOVA LÓGICA: Não altera o valor de 'imageUrl' no parsing
                     if (type === 'cardapio') {
                         item.imageUrl = (String(item.imageUrl || '').trim());
                     }
 
-                    // Apenas adiciona se estiver disponível (para cardápio) ou ativo (para promoções)
-                    // Para deliveryFees, adiciona todos os bairros
-                    if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees') {
+                    if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees' || (type === 'ingredientesHamburguer' && item.available)) {
                         parsedData.push(item);
                     }
                 } else {
                     console.warn(`DEBUG: Linha ${i + 1} ignorada ou malformada (${type} - esperado ${mappedHeaders.length} colunas, encontrado ${rowValues.length}): "${line}"`);
                 }
             }
-            console.log(`DEBUG: Dados parseados para ${type}:`, parsedData); // Adicionado log para depuração
+            console.log(`DEBUG: Dados parseados para ${type}:`, parsedData);
             return parsedData;
         }
 
+        function openBurgerBuilderModal(baseBurgerItem) {
+            console.log('DEBUG: openBurgerBuilderModal: Abrindo modal de montagem de hambúrguer.');
+            burgerIngredientsContainer.innerHTML = '';
+            burgerBuilderModal.dataset.basePrice = baseBurgerItem.basePrice;
+            
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                if (ingredients.length > 0) {
+                    const firstIngredient = ingredients[0];
+                    const isSingleChoice = firstIngredient.isSingleChoice;
+                    const limit = firstIngredient.limit || Infinity;
+                    const isRequired = firstIngredient.isRequired || false;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'ingredient-category';
+                    
+                    let categoryTitle = capitalizeFirstLetter(category);
+                    if (isRequired) {
+                        categoryTitle += ' (Obrigatório)';
+                    } else if (!isSingleChoice && limit !== Infinity && limit > 1) {
+                        categoryTitle += ` (Escolha até ${limit})`;
+                    } else if (!isSingleChoice && limit === 1) {
+                        categoryTitle += ` (Escolha 1)`;
+                    } else if (isSingleChoice) {
+                         categoryTitle += ` (Escolha 1)`;
+                    }
 
-        // Função para popular o cardápio dinamicamente
+                    categoryDiv.innerHTML = `<h4>${categoryTitle}</h4>`;
+                    
+                    ingredients.forEach(ingredient => {
+                        const inputType = isSingleChoice ? 'radio' : 'checkbox';
+                        const inputName = isSingleChoice ? category : `multiple-${category}`;
+                        const priceDisplay = ingredient.price > 0 ? `+ R$ ${ingredient.price.toFixed(2).replace('.', ',')}` : '';
+                        
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'ingredient-option';
+                        
+                        const input = document.createElement('input');
+                        input.type = inputType;
+                        input.id = `${inputName}-${ingredient.id}`;
+                        input.name = inputName;
+                        input.value = ingredient.id;
+                        input.dataset.price = ingredient.price;
+                        input.classList.add('form-radio');
+
+                        const label = document.createElement('label');
+                        label.htmlFor = input.id;
+                        label.innerHTML = `${ingredient.name} <span class="price">${priceDisplay}</span>`;
+
+                        optionDiv.appendChild(input);
+                        optionDiv.appendChild(label);
+                        
+                        // Ouve o evento de clique em toda a div
+                        optionDiv.addEventListener('click', (e) => {
+                            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                                input.checked = !input.checked;
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+                        
+                        // Ouve o evento de `change` para os inputs
+                        input.addEventListener('change', (e) => {
+                            const currentInput = e.target;
+                            const currentCategory = currentInput.name.replace('multiple-', '');
+                            const isCurrentSingleChoice = allBurgerIngredients[currentCategory][0]?.isSingleChoice;
+                            const limit = allBurgerIngredients[currentCategory][0]?.limit || Infinity;
+                            
+                            // Atualiza a classe 'selected' visualmente
+                            if (isCurrentSingleChoice) {
+                                document.querySelectorAll(`input[name="${currentCategory}"]`).forEach(el => {
+                                    el.closest('.ingredient-option').classList.remove('selected');
+                                });
+                            }
+                            if (currentInput.checked) {
+                                currentInput.closest('.ingredient-option').classList.add('selected');
+                            } else {
+                                currentInput.closest('.ingredient-option').classList.remove('selected');
+                            }
+                            
+                            // Lógica de limite para checkboxes
+                            if (!isCurrentSingleChoice && limit !== Infinity) {
+                                const checkedCount = document.querySelectorAll(`input[name="${e.target.name}"]:checked`).length;
+                                if (checkedCount > limit) {
+                                    e.target.checked = false;
+                                    e.target.closest('.ingredient-option').classList.remove('selected');
+                                    showMessageModal(`Você pode escolher no máximo ${limit} item(s) da categoria "${capitalizeFirstLetter(currentCategory)}".`);
+                                }
+                            }
+                            
+                            updateBurgerPrice();
+                        });
+
+                        categoryDiv.appendChild(optionDiv);
+                    });
+                    burgerIngredientsContainer.appendChild(categoryDiv);
+                }
+            }
+            
+            burgerTotalPriceEl.textContent = 'R$ ' + baseBurgerItem.basePrice.toFixed(2).replace('.', ',');
+            
+            addCustomBurgerBtn.onclick = () => addCustomBurgerToOrder(baseBurgerItem);
+            
+            burgerBuilderModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
+        }
+        
+        function updateBurgerPrice() {
+            let total = parseFloat(burgerBuilderModal.dataset.basePrice) || 0;
+            
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                const isSingleChoice = ingredients[0]?.isSingleChoice;
+                
+                if (isSingleChoice) {
+                    const selectedRadio = document.querySelector(`input[name="${category}"]:checked`);
+                    if (selectedRadio) {
+                        total += parseFloat(selectedRadio.dataset.price);
+                    }
+                } else {
+                    document.querySelectorAll(`input[name="multiple-${category}"]:checked`).forEach(checkbox => {
+                        total += parseFloat(checkbox.dataset.price);
+                    });
+                }
+            }
+            
+            burgerTotalPriceEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        }
+
+        function addCustomBurgerToOrder(baseBurgerItem) {
+            const selectedIngredients = [];
+            let total = baseBurgerItem.basePrice;
+            
+            let allRequiredCategoriesFilled = true;
+
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                const firstIngredient = ingredients[0];
+                const isSingleChoice = firstIngredient?.isSingleChoice;
+                const isRequired = firstIngredient?.isRequired || false;
+
+                if (isRequired) {
+                    const selectedInputs = document.querySelectorAll(`input[name="${isSingleChoice ? category : `multiple-${category}`}"]:checked`);
+                    if (selectedInputs.length === 0) {
+                        showMessageModal(`Por favor, escolha uma opção na categoria "${capitalizeFirstLetter(category)}".`);
+                        allRequiredCategoriesFilled = false;
+                        break;
+                    }
+                }
+
+                if (isSingleChoice) {
+                    const selectedInput = document.querySelector(`input[name="${category}"]:checked`);
+                    if (selectedInput) {
+                        const ingredient = ingredients.find(ing => ing.id === selectedInput.value);
+                        if (ingredient) {
+                            selectedIngredients.push({ name: ingredient.name, category: ingredient.category });
+                            total += ingredient.price;
+                        }
+                    }
+                } else {
+                    document.querySelectorAll(`input[name="multiple-${category}"]:checked`).forEach(input => {
+                        const ingredient = ingredients.find(ing => ing.id === input.value);
+                        if (ingredient) {
+                            selectedIngredients.push({ name: ingredient.name, category: ingredient.category });
+                            total += ingredient.price;
+                        }
+                    });
+                }
+            }
+            
+            if (!allRequiredCategoriesFilled) {
+                return;
+            }
+
+            addToOrder({
+                type: 'custom_burger',
+                name: 'Hambúrguer Personalizado',
+                price: total,
+                description: `Monte seu hambúrguer.`,
+                ingredients: selectedIngredients,
+                category: baseBurgerItem.category
+            }, addCustomBurgerBtn);
+            
+            burgerBuilderModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        }
+
         function populateMenu(menuItems, orderedCategories) {
-            console.log('DEBUG: populateMenu: Iniciando populamento do menu.'); // Log
             const dynamicSectionsContainer = document.getElementById('dynamic-pizza-sections');
             dynamicSectionsContainer.innerHTML = ''; 
 
@@ -1175,19 +1459,14 @@
                         if (item.available) { 
                             let itemHtml = '';
                             
-                            // NOVA LÓGICA DE EXIBIÇÃO DA IMAGEM
                             const trimmedImageUrl = String(item.imageUrl || '').trim();
                             let imageElement = '';
 
                             if (trimmedImageUrl.toLowerCase() === 'sem imagem') {
-                                // Caso 1: Usuário informou "Sem Imagem"
                                 imageElement = `<div class="no-image-placeholder">Sem Imagem</div>`;
                             } else if (trimmedImageUrl.length > 0) {
-                                // Caso 2: URL de imagem fornecida
                                 imageElement = `<img src="${trimmedImageUrl}" alt="Imagem de ${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='';">`;
                             } else {
-                                // Caso 3: Campo de imagem em branco
-                                // Deixa a variável 'imageElement' como string vazia para não renderizar nada
                                 imageElement = '';
                             }
 
@@ -1249,6 +1528,8 @@
                                 } else {
                                     imageElement = '';
                                 }
+                                
+                                const buttonText = item.isCustomizable ? 'Montar' : 'Adicionar';
 
                                 itemHtml = `
                                     <div class="flavor-card bg-white rounded-xl overflow-hidden shadow-lg transition duration-300">
@@ -1260,7 +1541,7 @@
                                             <span class="font-bold text-red-600 text-lg">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</span>
                                             <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
                                             data-item-id="${item.id}">
-                                                Adicionar
+                                                ${buttonText}
                                             </button>
                                         </div>
                                     </div>
@@ -1274,7 +1555,6 @@
             });
 
             attachAddButtonListeners();
-            console.log('DEBUG: populateMenu: Menu populado e listeners anexados.'); // Log
         }
 
         function capitalizeFirstLetter(string) {
@@ -1282,7 +1562,6 @@
         }
 
         function createCategoryButtons(categories) {
-            console.log('DEBUG: createCategoryButtons: Criando botões de categoria.'); // Log
             const categoryButtonsContainer = document.getElementById('category-buttons-container');
             categoryButtonsContainer.innerHTML = ''; 
 
@@ -1340,11 +1619,9 @@
                     currentActiveCategoryByScroll = category;
                 }
             });
-            console.log('DEBUG: createCategoryButtons: Botões de categoria criados.'); // Log
         }
 
         function attachAddButtonListeners() {
-            console.log('DEBUG: attachAddButtonListeners: Anexando listeners aos botões de adicionar item.'); // Log
             document.querySelectorAll('.add-item-btn').forEach(button => {
                 button.removeEventListener('click', handleAddButtonClick); 
                 button.addEventListener('click', handleAddButtonClick);
@@ -1352,7 +1629,6 @@
         }
 
         function toggleAddItemButtons(enableAll = true) {
-            console.log('DEBUG: toggleAddItemButtons: Habilitando/Desabilitando botões de adicionar item. enableAll:', enableAll); // Log
             document.querySelectorAll('.add-item-btn').forEach(button => {
                 const itemId = button.dataset.itemId;
                 const item = allMenuData.find(i => i.id === itemId);
@@ -1383,7 +1659,6 @@
         }
 
         function toggleCategoryButtons(enableAll = true) {
-            console.log('DEBUG: toggleCategoryButtons: Habilitando/Desabilitando botões de categoria. enableAll:', enableAll); // Log
             document.querySelectorAll('.category-btn').forEach(button => {
                 const category = button.dataset.category.toLowerCase();
                 if (enableAll || !isSelectingHalfPizza) { 
@@ -1412,7 +1687,6 @@
         }
 
         function handleAddButtonClick(e) {
-            console.log('DEBUG: handleAddButtonClick: Botão de adicionar clicado.'); // Log
             const clickedButton = e.target; 
             const itemId = clickedButton.dataset.itemId;
             const item = allMenuData.find(i => i.id === itemId);
@@ -1423,9 +1697,14 @@
             }
 
             const itemImageUrl = item.isPizza ? item.imageUrl : null;
+            
+            if (item.isCustomizable) {
+                burgerBuilderModal.dataset.basePrice = item.basePrice;
+                openBurgerBuilderModal(item);
+                return;
+            }
 
             if (isSelectingSecondHalf) {
-                console.log('DEBUG: isSelectingSecondHalf é TRUE. Tentando adicionar segunda metade.'); // Log
                 if (!item.isPizza) {
                     showMessageModal('Por favor, escolha uma pizza para a segunda metade.');
                     return;
@@ -1445,7 +1724,6 @@
                 const pendingHalfIndex = order.findIndex(orderItem => orderItem.id === 'pending-half-pizza');
                 if (pendingHalfIndex > -1) {
                     order.splice(pendingHalfIndex, 1);
-                    console.log('DEBUG: Meia pizza pendente removida para combinação.'); // Log
                 }
 
                 const cleanFirstName = firstHalfPizza.name;
@@ -1473,10 +1751,8 @@
                 toggleAddItemButtons(true); 
                 toggleCategoryButtons(true); 
                 showTemporaryFeedback('Pizza meio a meio adicionada ao pedido!', 'bg-green-500'); 
-                console.log('DEBUG: Pizza meio a meio adicionada. Estado de meia pizza resetado.'); // Log
                 
             } else if (item.isPizza) {
-                console.log('DEBUG: Item é pizza. Abrindo modal de seleção de tamanho.'); // Log
                 currentPizzaData = { ...item }; 
                 modalPizzaName.textContent = item.name;
                 modalPizzaDescription.textContent = item.description;
@@ -1514,7 +1790,6 @@
                     pizzaSizeOptions.appendChild(optionDiv);
 
                     optionDiv.querySelector('.add-full-size-pizza-btn').addEventListener('click', function() {
-                        console.log('DEBUG: Adicionar Inteira clicado.'); // Log
                         const selectedSlices = parseInt(this.dataset.slices);
                         const selectedPriceKey = this.dataset.priceKey;
                         addToOrder({
@@ -1525,13 +1800,11 @@
                             category: currentPizzaData.category,
                             selected_slices: selectedSlices
                         }, this, currentPizzaData.imageUrl); 
-                        pizzaOptionModal.style.display = 'none'; // FECHA O MODAL AQUI
+                        pizzaOptionModal.style.display = 'none';
                         updatePromotionButtonVisibility(); 
-                        console.log('DEBUG: Modal de opção de pizza fechado após adicionar inteira.'); // Log
                     });
 
                     optionDiv.querySelector('.add-half-size-pizza-btn').addEventListener('click', function() {
-                        console.log('DEBUG: Adicionar Meia Pizza clicado.'); // Log
                         const selectedSlices = parseInt(this.dataset.slices);
                         const selectedPriceKey = this.dataset.priceKey;
                         firstHalfPizza = {
@@ -1546,9 +1819,8 @@
                         isSelectingSecondHalf = true;
                         isSelectingHalfPizza = true; 
                         isFirstHalfPromotional = (currentPizzaData.category.toLowerCase() === 'promocionais'); 
-                        pizzaOptionModal.style.display = 'none'; // FECHA O MODAL AQUI
+                        pizzaOptionModal.style.display = 'none';
                         updatePromotionButtonVisibility(); 
-                        console.log('DEBUG: Modal de opção de pizza fechado após adicionar primeira metade.'); // Log
 
                         toggleAddItemButtons(false); 
                         toggleCategoryButtons(false); 
@@ -1564,19 +1836,15 @@
                                 selected_slices: selectedSlices
                             }, this, currentPizzaData.imageUrl 
                         );
-                        // Exibe a mensagem de instrução para a segunda metade
                         setTimeout(() => {
                             showMessageModal('Agora, escolha a segunda metade da sua pizza.'); 
                         }, 100);
-                        console.log('DEBUG: Estado de meia pizza ativado.'); // Log
                     });
                 });
 
                 pizzaOptionModal.style.display = 'flex';
                 promotionButton.style.display = 'none'; 
-                console.log('DEBUG: Modal de opção de pizza exibido.'); // Log
             } else { 
-                console.log('DEBUG: Item não é pizza. Adicionando diretamente ao pedido.'); // Log
                 addToOrder({
                     type: 'full',
                     name: item.name,
@@ -1588,36 +1856,27 @@
         }
         
         function addToOrder(item, clickedButton = null, itemImageUrl = null) {
-            console.log('DEBUG: addToOrder: Adicionando item:', item.name);
             order.push(item);
             updateOrderDisplay();
-            updateCartCount(); // Garante que o contador é atualizado
-            console.log('DEBUG: addToOrder: Ordem e contador atualizados. Itens no carrinho:', order.length); // Log
+            updateCartCount();
 
             if (clickedButton) {
-                console.log('DEBUG: addToOrder: Iniciando animação para o carrinho.');
                 animateItemToCart(clickedButton, itemImageUrl); 
             }
             
             showTemporaryFeedback('✔️ Adicionado ao pedido!', 'bg-green-500');
-            console.log('DEBUG: addToOrder: Feedback temporário exibido.');
         }
 
         function addToOrderOnly(item, clickedButton = null, itemImageUrl = null) {
-            console.log('DEBUG: addToOrderOnly: Adicionando item (apenas):', item.name);
             order.push(item);
             updateOrderDisplay();
-            updateCartCount(); // Garante que o contador é atualizado
+            updateCartCount();
             if (clickedButton) {
-                console.log('DEBUG: addToOrderOnly: Iniciando animação para o carrinho.');
                 animateItemToCart(clickedButton, itemImageUrl); 
             }
-            // No temporary feedback here, as it's typically followed by another action/message
-            console.log('DEBUG: addToOrderOnly: Ordem e contador atualizados. Itens no carrinho:', order.length); // Log
         }
 
         function animateItemToCart(originElement, imageUrl = null) {
-            console.log('DEBUG: animateItemToCart: Iniciando animação.'); // Log
             const cartButtonRect = cartButton.getBoundingClientRect();
             const originRect = originElement.getBoundingClientRect();
 
@@ -1638,13 +1897,11 @@
             document.body.appendChild(flyingEl);
 
             flyingEl.addEventListener('animationend', () => {
-                console.log('DEBUG: animateItemToCart: Animação finalizada, removendo elemento voador.'); // Log
                 flyingEl.remove();
             });
         }
 
         function showTemporaryFeedback(message, bgColorClass) {
-            console.log('DEBUG: showTemporaryFeedback: Exibindo feedback temporário:', message); // Log
             const feedback = document.createElement('div');
             feedback.textContent = message;
             feedback.className = `fixed right-4 ${bgColorClass} text-white px-4 py-2 rounded-lg shadow-lg slide-in`;
@@ -1660,13 +1917,10 @@
             }, 2000);
         }
         
-        // Atualizar exibição do pedido
         function updateOrderDisplay() {
-            console.log('DEBUG: updateOrderDisplay: Atualizando exibição do pedido.');
             const orderItemsContainer = document.getElementById('orderItems');
             let subtotal = 0;
 
-            // Calcula o subtotal dos itens no pedido
             order.forEach((item) => {
                 subtotal += item.price;
             });
@@ -1676,35 +1930,38 @@
                 orderItemsContainer.innerHTML = '';
                 orderItemsContainer.appendChild(emptyOrderMessage);
                 document.getElementById('subtotal').textContent = 'R$ 0,00';
-                selectedPaymentMethod = null; // Reseta o método de pagamento se o pedido estiver vazio
+                selectedPaymentMethod = null;
             } else {
                 emptyOrderMessage.classList.add('hidden');
                 
                 let itemsHTML = '';
                 order.forEach((item, index) => {
-                    let itemDescription = item.description || ''; 
                     let itemName = item.name;
+                    let itemDescription = '';
 
                     if (item.type === 'promotion') {
-                        itemName = `<i class="fas fa-tags text-red-600 mr-2"></i> ${item.name}`; 
-                    } else if (item.type === 'half_pending') { 
-                        const sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
-                        itemName = `<b>${sizeLabel}</b>: ${item.name} (1ª Metade)`; 
-                        itemDescription = `Aguardando 2ª metade`; 
+                        itemName = `<i class="fas fa-tags text-red-600 mr-2"></i> ${item.name}`;
                     } else if (item.selected_slices) {
                         const sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
                         itemName = `<b>${sizeLabel}</b>: ${item.name}`;
+                    } else if (item.type === 'custom_burger') {
+                        itemName = `<i class="fas fa-hamburger text-red-600 mr-2"></i> ${item.name}`;
+                        const ingredientsListHtml = `
+                            <ul class="text-xs text-gray-500 mt-1 pl-4 list-disc list-inside">
+                                ${item.ingredients.map(ing => `<li>${ing.name}</li>`).join('')}
+                            </ul>
+                        `;
+                        itemDescription = ingredientsListHtml;
                     }
                     
                     const isLastItem = (index === order.length - 1);
                     const borderClass = isLastItem && !selectedPaymentMethod && !selectedAddress.bairro ? '' : 'border-b border-gray-100';
 
-
                     itemsHTML += `
                         <div class="flex justify-between items-center py-3 ${borderClass}">
                             <div class="flex-1">
                                 <p class="font-medium">${itemName}</p>
-                                <p class="text-sm text-gray-500">${itemDescription}</p>
+                                ${item.type === 'custom_burger' ? itemDescription : `<p class="text-sm text-gray-500">${itemDescription}</p>`}
                             </div>
                             <div class="flex items-center">
                                 <span class="font-bold mr-4">R$ ${item.price.toFixed(2).replace('.', ',')}</span>
@@ -1719,23 +1976,21 @@
                 subtotalEl.textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
             }
             
-            // Lógica para exibir a taxa de entrega e o botão/ícone de edição
             if (selectedAddress.bairro) {
                 deliveryFeeDisplay.textContent = 'R$ ' + selectedAddress.deliveryFee.toFixed(2).replace('.', ',');
                 deliveryFeeDisplay.classList.remove('hidden');
                 informAddressBtn.classList.add('hidden');
                 editDeliveryAddressBtn.classList.remove('hidden');
             } else {
-                deliveryFeeDisplay.textContent = ''; // Limpa o texto
-                deliveryFeeDisplay.classList.add('hidden'); // Esconde o span do valor
-                informAddressBtn.classList.remove('hidden'); // Mostra o botão "Informar Endereço"
-                editDeliveryAddressBtn.classList.add('hidden'); // Esconde o ícone de edição
+                deliveryFeeDisplay.textContent = '';
+                deliveryFeeDisplay.classList.add('hidden');
+                informAddressBtn.classList.remove('hidden');
+                editDeliveryAddressBtn.classList.add('hidden');
             }
             
-            const total = subtotal + selectedAddress.deliveryFee; // O total sempre inclui a taxa de entrega, mesmo que o subtotal seja 0
+            const total = subtotal + selectedAddress.deliveryFee;
             totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
 
-            // Adiciona a forma de pagamento ao resumo do pedido se selecionada
             if (selectedPaymentMethod) {
                 let paymentMethodText = '';
                 let trocoInfo = '';
@@ -1762,14 +2017,12 @@
                     </div>
                 `);
             }
-            console.log('DEBUG: updateOrderDisplay: Pedido atualizado. Subtotal:', subtotal, 'Total:', total); // Log
             
-            updateDrinkSuggestionButtons(); 
-            updateAddressDisplay(); // Garante que o resumo do endereço esteja atualizado
+            updateDrinkSuggestionButtons();
+            updateAddressDisplay();
         }
         
         function removeItem(index) {
-            console.log('DEBUG: removeItem: Removendo item no índice:', index); // Log
             const removedItem = order[index];
             order.splice(index, 1);
             updateOrderDisplay();
@@ -1783,14 +2036,12 @@
                 toggleAddItemButtons(true); 
                 toggleCategoryButtons(true); 
                 showMessageModal('Seleção de meia pizza cancelada.', 'bg-red-600'); 
-                console.log('DEBUG: Item removido era meia pizza pendente, estado resetado.'); // Log
             }
         }
         
         function clearOrder() {
-            console.log('DEBUG: clearOrder: Limpando pedido.'); // Log
-            order = []; // Apenas limpa o array de itens do pedido
-            updateOrderDisplay(); // Isso agora atualizará a UI corretamente, mantendo o endereço se já informado
+            order = [];
+            updateOrderDisplay();
             updateCartCount();
             firstHalfPizza = null;
             isSelectingSecondHalf = false;
@@ -1798,14 +2049,10 @@
             isFirstHalfPromotional = false; 
             toggleAddItemButtons(true); 
             toggleCategoryButtons(true);
-            // NÃO RESETA selectedAddress AQUI, ele deve persistir
-            updateCheckoutButtonText(); // Atualiza o texto do botão de checkout
-            // hideAddressSummary(); // Isso é tratado por updateAddressDisplay agora
-            console.log('DEBUG: Pedido limpo e estados resetados.'); // Log
+            updateCheckoutButtonText();
         }
         
         function updateCartCount() {
-            console.log('DEBUG: updateCartCount: Atualizando contador do carrinho. Itens no pedido:', order.length); // Log
             if (order.length > 0) {
                 cartCount.textContent = order.length;
                 cartCount.classList.remove('hidden');
@@ -1815,29 +2062,37 @@
         }
         
         function proceedToWhatsappCheckout() {
-            console.log('DEBUG: proceedToWhatsappCheckout: Preparando mensagem para WhatsApp.'); // Log
-            const phoneNumber = whatsappNumber; 
+            const whatsappNumber = '5587996070638'; 
             let message = 'Olá! Gostaria de fazer o seguinte pedido:\n\n';
             let subtotal = 0;
 
             order.forEach(item => {
                 let itemName = item.name;
+                let itemDescription = '';
+
                 if (item.type === 'promotion') {
                     itemName = item.name.replace('<i class="fas fa-tags text-red-600 mr-2"></i> ', ''); 
                 } else if (item.selected_slices) {
-                    itemName = `${item.selected_slices} FATIAS: ${item.name}`;
+                    itemName = `${item.selected_slices} FATIAS`.toUpperCase();
+                    itemName = `<b>${sizeLabel}</b>: ${item.name}`;
+                } else if (item.type === 'custom_burger') {
+                    itemName = `Hambúrguer Personalizado`;
+                    itemDescription = item.ingredients.map(ing => `  - ${ing.name}`).join('\n');
+                    message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n${itemDescription}\n`;
                 }
-                message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+
+                if (item.type !== 'custom_burger') {
+                    message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                }
                 subtotal += item.price;
             });
 
-            const total = subtotal + selectedAddress.deliveryFee; // Usa a taxa dinâmica
+            const total = subtotal + selectedAddress.deliveryFee;
 
             message += `\nSubtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-            message += `\nTaxa de entrega (${selectedAddress.bairro || 'Não informado'}): R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`; // Mensagem de taxa dinâmica
+            message += `\nTaxa de entrega (${selectedAddress.bairro || 'Não informado'}): R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`;
             message += `\nTotal: R$ ${total.toFixed(2).replace('.', ',')}`;
             
-            // INFORMAÇÕES DE ENDEREÇO NA MENSAGEM DO WHATSAPP
             if (selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
                 message += `\n\nEndereço de Entrega:\n`;
                 message += `Bairro: ${selectedAddress.bairro}\n`;
@@ -1862,73 +2117,58 @@
 
             message += '\n\nObrigado!';
 
-            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
             
-            clearOrder(); // Limpa o pedido após finalizar
-            console.log('DEBUG: Mensagem WhatsApp gerada e pedido limpo.'); // Log
+            clearOrder();
         }
 
-        // Função para gerenciar o fluxo de checkout (ATUALIZADA)
         function handleCheckoutFlow() {
-            console.log('DEBUG: handleCheckoutFlow: Iniciando fluxo de checkout.'); // Log
             if (order.length === 0) {
                 showMessageModal('O seu pedido está vazio. Adicione itens antes de finalizar.');
-                console.log('DEBUG: Checkout abortado: Pedido vazio.'); // Log
                 return;
             }
             
             if (isSelectingHalfPizza) { 
                 showMessageModal('Por favor, escolha a segunda metade da sua pizza antes de finalizar o pedido.');
-                console.log('DEBUG: Checkout abortado: Seleção de meia pizza pendente.'); // Log
                 return;
             }
 
-            // NOVO: Verifica se o endereço foi informado
             if (!selectedAddress.bairro || !selectedAddress.rua || !selectedAddress.numero) {
-                console.log('DEBUG: Endereço não informado. Abrindo modal de endereço.'); // Log
                 showAddressInputModal();
                 return;
             }
 
             const hasDrinks = order.some(item => item.category === 'bebidas');
             if (!hasDrinks) {
-                console.log('DEBUG: Pedido sem bebidas. Exibindo sugestão de bebidas.'); // Log
                 displayDrinkSuggestionModal(); 
                 return; 
             }
 
             if (!selectedPaymentMethod) {
                 isCheckoutInitiated = true; 
-                console.log('DEBUG: Forma de pagamento não selecionada. Abrindo modal de pagamento.'); // Log
                 openPaymentMethodModal(true); 
             } else {
-                console.log('DEBUG: Todos os passos OK. Prosseguindo para WhatsApp.'); // Log
                 proceedToWhatsappCheckout();
             }
         }
 
-        // Função para atualizar o texto do botão de checkout (SIMPLIFICADA)
         function updateCheckoutButtonText() {
             checkoutButton.textContent = 'Finalizar Pedido';
-            checkoutButton.onclick = handleCheckoutFlow; // Volta para a função principal do checkout
-            console.log('DEBUG: updateCheckoutButtonText: Texto do botão de checkout atualizado.'); // Log
+            checkoutButton.onclick = handleCheckoutFlow;
         }
 
         function backToMenu() {
-            console.log('DEBUG: backToMenu: Voltando ao menu.'); // Log
             closeOrderSidebar();
             document.getElementById('menu').scrollIntoView({ behavior: 'smooth' });
         }
 
         function backToOrderSidebarFromDrinkSuggestion() {
-            console.log('DEBUG: backToOrderSidebarFromDrinkSuggestion: Voltando para a sidebar do pedido.'); // Log
             drinkSuggestionModal.style.display = 'none'; 
             orderSidebar.scrollTop = orderSidebar.scrollHeight;
         }
 
         function displayPromotionsPopup() {
-            console.log('DEBUG: displayPromotionsPopup: Exibindo popup de promoções.'); // Log
             promotionsListEl.innerHTML = '';
             const activePromotions = allPromotionsData.filter(promo => promo.active && promo.promoPrice !== null);
 
@@ -1959,17 +2199,14 @@
                     });
                 });
                 promotionPopup.style.display = 'flex';
-                console.log('DEBUG: Promoções ativas encontradas e exibidas.'); // Log
             } else {
                 promotionPopup.style.display = 'none';
-                console.log('DEBUG: Nenhuma promoção ativa encontrada.'); // Log
             }
         }
 
         function addPromotionToOrder(promoId, clickedButton = null, itemImageUrl = null) { 
             const promotion = allPromotionsData.find(p => p.id === promoId);
             if (promotion) {
-                console.log('DEBUG: addPromotionToOrder: Adicionando promoção:', promotion.name); // Log
                 order.push({
                     type: 'promotion',
                     name: promotion.name,
@@ -1984,16 +2221,15 @@
                     animateItemToCart(clickedButton, itemImageUrl); 
                 }
                 showTemporaryFeedback(`Promoção "${promotion.name}" adicionada ao pedido!`, 'bg-green-500'); 
-                console.log('DEBUG: addPromotionToOrder: Promoção adicionada e UI atualizada.'); // Log
             } else {
-                console.error('DEBUG: addPromotionToOrder: Promoção não encontrada:', promoId);
                 showMessageModal('Erro ao adicionar promoção. Por favor, tente novamente.');
             }
         }
 
         function updatePromotionButtonVisibility() {
             const activePromotionsWithPrice = allPromotionsData.filter(promo => promo.active && promo.promoPrice !== null);
-            if (activePromotionsWithPrice.length > 0 && !orderSidebar.classList.contains('translate-x-0')) {
+            const isAnyModalOpen = document.querySelector('.modal[style*="display: flex"]');
+            if (activePromotionsWithPrice.length > 0 && !orderSidebar.classList.contains('translate-x-0') && !isAnyModalOpen) {
                 promotionButton.style.display = 'flex';
             } else {
                 promotionButton.style.display = 'none';
@@ -2001,17 +2237,17 @@
         }
 
         closePromotionPopupBtn.addEventListener('click', function() {
-            console.log('DEBUG: Fechando popup de promoção via botão X.'); // Log
             promotionPopup.style.display = 'none';
+            updatePromotionButtonVisibility();
         });
         closePromotionPopupBtnBottom.addEventListener('click', function() {
-            console.log('DEBUG: Fechando popup de promoção via botão inferior.'); // Log
             promotionPopup.style.display = 'none';
+            updatePromotionButtonVisibility();
         });
         window.addEventListener('click', function(event) {
             if (event.target == promotionPopup) {
-                console.log('DEBUG: Fechando popup de promoção clicando fora.'); // Log
                 promotionPopup.style.display = 'none';
+                updatePromotionButtonVisibility();
             }
         });
 
@@ -2020,7 +2256,6 @@
         });
 
         function displayDrinkSuggestionModal() {
-            console.log('DEBUG: displayDrinkSuggestionModal: Exibindo modal de sugestão de bebidas.'); // Log
             suggestedDrinksList.innerHTML = ''; 
             const availableDrinks = allMenuData.filter(item => item.category === 'bebidas' && item.available);
 
@@ -2053,22 +2288,20 @@
                         }
                     });
                 });
-                console.log('DEBUG: Bebidas disponíveis e sugestões populadas.'); // Log
             } else {
                 suggestedDrinksList.innerHTML = '<p class="text-gray-500">Nenhuma bebida disponível para sugestão no momento.</p>';
-                console.log('DEBUG: Nenhuma bebida disponível para sugestão.'); // Log
             }
             drinkSuggestionModal.style.display = 'flex'; 
+            updatePromotionButtonVisibility();
             updateDrinkSuggestionButtons(); 
         }
 
         closeDrinkSuggestionModalBtn.addEventListener('click', function() {
-            console.log('DEBUG: Fechando modal de sugestão de bebidas.'); // Log
             drinkSuggestionModal.style.display = 'none';
+            updatePromotionButtonVisibility();
         });
 
         proceedWithoutDrinksBtn.addEventListener('click', function() {
-            console.log('DEBUG: Botão Finalizar sem Bebidas/com Bebidas clicado.'); // Log
             drinkSuggestionModal.style.display = 'none';
             const hasDrinks = order.some(item => item.category === 'bebidas');
 
@@ -2095,42 +2328,39 @@
 
 
         closeConfirmNoDrinkModalBtn.addEventListener('click', function() {
-            console.log('DEBUG: Fechando modal de confirmação sem bebida.'); // Log
             confirmNoDrinkModal.style.display = 'none';
+            updatePromotionButtonVisibility();
             drinkSuggestionModal.style.display = 'flex'; 
         });
 
         confirmNoDrinkYesBtn.addEventListener('click', function() {
-            console.log('DEBUG: Confirmado pedido sem bebida.'); // Log
             confirmNoDrinkModal.style.display = 'none';
             if (selectedPaymentMethod) {
-                console.log("DEBUG: Confirmou sem bebida, pagamento já selecionado. Indo para WhatsApp.");
                 proceedToWhatsappCheckout();
             } else {
-                console.log("DEBUG: Confirmou sem bebida, pagamento NÃO selecionado. Abrindo modal de pagamento.");
                 isCheckoutInitiated = true; 
                 openPaymentMethodModal(true); 
             }
         });
 
         confirmNoDrinkNoBtn.addEventListener('click', function() { 
-            console.log('DEBUG: Negado pedido sem bebida, voltando para sugestão.'); // Log
             confirmNoDrinkModal.style.display = 'none';
+            updatePromotionButtonVisibility();
             drinkSuggestionModal.style.display = 'flex'; 
         });
 
         window.addEventListener('click', function(event) {
             if (event.target == confirmNoDrinkModal) {
-                console.log('DEBUG: Fechando modal de confirmação sem bebida clicando fora.'); // Log
                 confirmNoDrinkModal.style.display = 'none';
+                updatePromotionButtonVisibility();
                 drinkSuggestionModal.style.display = 'flex'; 
             }
         });
 
         function openPaymentMethodModal(fromCheckout = false) { 
-            console.log('DEBUG: openPaymentMethodModal: Abrindo modal de pagamento. fromCheckout:', fromCheckout); // Log
             isCheckoutInitiated = fromCheckout; 
             paymentMethodModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
             
             const totalOrder = calculateOrderTotal();
             paymentModalTotal.textContent = `R$ ${totalOrder.toFixed(2).replace('.', ',')}`;
@@ -2162,11 +2392,9 @@
                     radio.closest('.payment-option').classList.remove('selected');
                 });
             }
-            console.log("DEBUG: openPaymentMethodModal() called. fromCheckout:", fromCheckout, "selectedPaymentMethod on entry:", selectedPaymentMethod);
         }
 
         function closePaymentMethodModal() {
-            console.log('DEBUG: closePaymentMethodModal: Fechando modal de pagamento.'); // Log
             paymentMethodModal.style.display = 'none';
         }
 
@@ -2221,11 +2449,10 @@
             order.forEach(item => {
                 currentSubtotal += item.price;
             });
-            return currentSubtotal + selectedAddress.deliveryFee; // Soma a taxa de entrega DINÂMICA
+            return currentSubtotal + selectedAddress.deliveryFee;
         }
 
         confirmPaymentMethodBtn.addEventListener('click', () => {
-            console.log('DEBUG: Botão Confirmar Pagamento clicado.'); // Log
             const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
             if (selectedRadio) {
                 if (selectedRadio.value === 'Dinheiro') {
@@ -2234,7 +2461,6 @@
 
                     if (isNaN(trocoParaValue) || trocoParaValue < totalOrder) {
                         showMessageModal(`O valor para troco (R$ ${totalOrder.toFixed(2).replace('.', ',')}) não pode ser menor que o total do pedido (R$ ${totalOrder.toFixed(2).replace('.', ',')}).`);
-                        console.log('DEBUG: Valor para troco inválido.'); // Log
                         return; 
                     }
                     const trocoCalculado = trocoParaValue - totalOrder;
@@ -2247,20 +2473,15 @@
                     selectedPaymentMethod = selectedRadio.value;
                 }
                 
-                console.log("DEBUG: Payment method selected:", selectedPaymentMethod);
                 closePaymentMethodModal();
                 
                 if (isCheckoutInitiated) {
-                    console.log("DEBUG: Initiated from checkout, proceeding to WhatsApp.");
                     proceedToWhatsappCheckout(); 
-                } else {
-                    console.log("DEBUG: Not initiated from checkout, returning to order sidebar.");
                 }
                 isCheckoutInitiated = false; 
                 updateOrderDisplay(); 
             } else {
                 showMessageModal('Por favor, selecione uma forma de pagamento.');
-                console.log('DEBUG: Nenhuma forma de pagamento selecionada.'); // Log
             }
         });
 
@@ -2269,7 +2490,7 @@
 
         function getStickyHeaderHeight() {
             const stickyHeader = document.querySelector('.category-bar-mobile-sticky');
-            return stickyHeader ? stickyHeader.offsetHeight : 0;
+            return stickyHeader.offsetHeight;
         }
 
         function setActiveCategoryButton(category) {
@@ -2290,7 +2511,6 @@
         let categoryObserver; 
 
         function setupCategoryObserver() {
-            console.log('DEBUG: setupCategoryObserver: Configurando observador de categoria.'); // Log
             if (categoryObserver) {
                 categoryObserver.disconnect();
             }
@@ -2365,38 +2585,32 @@
                 }
             }, {
                 root: null,
-                rootMargin: '0px 0px 0px 0px', 
+                rootMargin: `-${getStickyHeaderHeight()}px 0px 0px 0px`, 
                 threshold: 0 
             });
 
             categorySections.forEach(section => {
                 categoryObserver.observe(section);
             });
-            console.log('DEBUG: setupCategoryObserver: Observador de categoria configurado.'); // Log
         }
 
-        // --- Funções para o Modal de Endereço ---
         function showAddressInputModal() {
-            console.log('DEBUG: showAddressInputModal: Abrindo modal de endereço.'); // Log
             addressInputModal.style.display = 'flex';
-            promotionButton.style.display = 'none'; // Esconde o botão de promoção ao abrir o modal de endereço
+            updatePromotionButtonVisibility();
 
-            // Preenche os campos se já houver dados no selectedAddress
             if (selectedAddress.bairro) {
                 neighborhoodSelect.value = selectedAddress.bairro;
             } else {
-                neighborhoodSelect.value = ""; // Reseta para "Selecione um bairro"
+                neighborhoodSelect.value = "";
             }
             streetInput.value = selectedAddress.rua || '';
             numberInput.value = selectedAddress.numero || '';
             referencePointInput.value = selectedAddress.referencia || '';
-            console.log('DEBUG: Modal de endereço exibido e campos preenchidos.'); // Log
         }
 
         function hideAddressInputModal() {
-            console.log('DEBUG: hideAddressInputModal: Fechando modal de endereço.'); // Log
             addressInputModal.style.display = 'none';
-            updatePromotionButtonVisibility(); // Reexibe o botão de promoção se aplicável
+            updatePromotionButtonVisibility();
         }
 
         closeAddressModalBtn.addEventListener('click', hideAddressInputModal);
@@ -2407,30 +2621,21 @@
         });
 
         function populateNeighborhoodDropdown(feesData) {
-            console.log('DEBUG: populateNeighborhoodDropdown: Populando dropdown de bairros.'); // Log
             neighborhoodSelect.innerHTML = '<option value="">Selecione um bairro</option>';
             if (!feesData || feesData.length === 0) {
-                console.warn('DEBUG: populateNeighborhoodDropdown: feesData está vazio ou nulo.');
                 return;
             }
             feesData.forEach(fee => {
-                console.log('DEBUG: Processando taxa de entrega:', fee); // Log detalhado
-                // Garante que fee.neighborhood é uma string não vazia
                 if (typeof fee.neighborhood === 'string' && fee.neighborhood.trim() !== '') {
                     const option = document.createElement('option');
                     option.value = fee.neighborhood;
                     option.textContent = `${fee.neighborhood} (R$ ${fee.deliveryFee.toFixed(2).replace('.', ',')})`;
                     neighborhoodSelect.appendChild(option);
-                    console.log('DEBUG: Adicionada opção de bairro:', option.textContent); // Log
-                } else {
-                    console.warn("DEBUG: Bairro inválido ou vazio encontrado nos dados de entrega:", fee);
                 }
             });
-            console.log('DEBUG: populateNeighborhoodDropdown: Dropdown de bairros populado.'); // Log
         }
 
         confirmAddressBtn.addEventListener('click', function() {
-            console.log('DEBUG: Botão Confirmar Endereço clicado.'); // Log
             const bairro = neighborhoodSelect.value;
             const rua = streetInput.value.trim();
             const numero = numberInput.value.trim();
@@ -2438,14 +2643,12 @@
 
             if (!bairro || !rua || !numero) {
                 showMessageModal('Por favor, preencha o bairro, a rua e o número para continuar.');
-                console.log('DEBUG: Campos de endereço obrigatórios não preenchidos.'); // Log
                 return;
             }
 
             const selectedFee = deliveryFeesData.find(fee => fee.neighborhood === bairro);
             if (!selectedFee) {
                 showMessageModal('Bairro selecionado inválido. Por favor, selecione um bairro da lista.');
-                console.log('DEBUG: Bairro selecionado não encontrado nos dados de taxa.'); // Log
                 return;
             }
 
@@ -2456,30 +2659,24 @@
                 referencia: referencia,
                 deliveryFee: selectedFee.deliveryFee
             };
-            console.log('DEBUG: Endereço selecionado:', selectedAddress); // Log
 
             hideAddressInputModal();
-            updateOrderDisplay(); // Atualiza o resumo do pedido com a nova taxa
-            showAddressSummary(); // Mostra o resumo do endereço
+            updateOrderDisplay();
+            showAddressSummary();
             
-            // Se o checkout foi iniciado e o endereço foi confirmado, continua o fluxo
             if (isCheckoutInitiated) {
-                console.log('DEBUG: Endereço confirmado, continuando fluxo de checkout.'); // Log
                 handleCheckoutFlow();
             }
         });
 
         function showAddressSummary() {
-            console.log('DEBUG: showAddressSummary: Exibindo resumo do endereço.'); // Log
             if (selectedAddress.bairro) {
                 addressSummarySection.classList.remove('hidden');
                 addressDisplay.textContent = `${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
                 neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
                 referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
-                console.log('DEBUG: Resumo do endereço exibido.'); // Log
             } else {
                 hideAddressSummary();
-                console.log('DEBUG: Nenhum endereço selecionado, resumo oculto.'); // Log
             }
         }
 
@@ -2491,45 +2688,30 @@
         }
 
         editAddressBtn.addEventListener('click', function() {
-            console.log('DEBUG: Botão Editar Endereço clicado.'); // Log
             showAddressInputModal();
         });
 
-        // NOVO: Definição da função updateAddressDisplay
         function updateAddressDisplay() {
-            console.log('DEBUG: updateAddressDisplay: Chamado para atualizar a exibição do endereço.');
             if (selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
                 addressSummarySection.classList.remove('hidden');
                 addressDisplay.textContent = `${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
                 neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
                 referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
-                console.log('DEBUG: Resumo do endereço atualizado e visível.');
             } else {
                 addressSummarySection.classList.add('hidden');
-                console.log('DEBUG: Nenhum endereço completo, resumo do endereço oculto.');
             }
         }
 
-        // NOVO: Event listener para o botão "Informar Endereço"
         informAddressBtn.addEventListener('click', function() {
-            console.log('DEBUG: Botão Informar Endereço clicado.');
             showAddressInputModal();
         });
 
-        // NOVO: Event listener para o botão "Editar Endereço" ao lado da taxa de entrega
         editDeliveryAddressBtn.addEventListener('click', function() {
-            console.log('DEBUG: Botão Editar Endereço (taxa) clicado.');
             showAddressInputModal();
         });
 
-        // =======================================================================================
-        // CÓDIGO REESTRUTURADO PARA MELHORAR O FLUXO DE ATUALIZAÇÃO
-        // =======================================================================================
-
-        // Nova função principal para buscar e renderizar todos os dados
         async function loadMenuAndRender() {
             try {
-                console.log('DEBUG: loadMenuAndRender: Iniciando busca da API...');
                 const response = await fetch('/api/menu'); 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -2537,16 +2719,25 @@
                     throw new Error(`Erro ao buscar dados da API: ${response.statusText || errorText}`);
                 }
                 const data = await response.json(); 
-                console.log('DEBUG: loadMenuAndRender: Dados da API recebidos com sucesso.');
                 
                 const cardapioCsvText = data.cardapio;
                 const promocoesCsvText = data.promocoes;
-                const deliveryFeesCsvText = data.deliveryFees; 
+                const deliveryFeesCsvText = data.deliveryFees;
+                const ingredientesHamburguerCsvText = data.ingredientesHamburguer;
 
                 allMenuData = parseCsvData(cardapioCsvText, 'cardapio');
                 allPromotionsData = parseCsvData(promocoesCsvText, 'promocoes');
-                deliveryFeesData = parseCsvData(deliveryFeesCsvText, 'deliveryFees'); 
+                deliveryFeesData = parseCsvData(deliveryFeesCsvText, 'deliveryFees');
                 
+                const rawBurgerIngredients = parseCsvData(ingredientesHamburguerCsvText, 'ingredientesHamburguer');
+                allBurgerIngredients = rawBurgerIngredients.reduce((acc, current) => {
+                    if (!acc[current.category]) {
+                        acc[current.category] = [];
+                    }
+                    acc[current.category].push(current);
+                    return acc;
+                }, {});
+
                 let orderedUniqueCategories = [];
                 const seenCategories = new Set();
                 allMenuData.forEach(item => {
@@ -2572,8 +2763,6 @@
                 setTimeout(() => {
                     window.dispatchEvent(new Event('scroll'));
                 }, 100);
-                
-                console.log('DEBUG: loadMenuAndRender: Carregamento e renderização concluídos.');
 
             } catch (error) {
                 console.error('DEBUG: loadMenuAndRender: Erro fatal ao carregar o cardápio:', error);
@@ -2581,9 +2770,7 @@
             }
         }
 
-        // Evento que garante que a UI será carregada após o DOM estar pronto
         document.addEventListener('DOMContentLoaded', function() {
-            // A chamada inicial do PWA, garantindo que o service worker seja registrado
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(registration => {
@@ -2596,19 +2783,14 @@
                         }
                     });
             }
-            // Chamada inicial para carregar todos os dados assim que o DOM estiver pronto
             loadMenuAndRender();
         });
         
-        // Listener para o problema do bfcache: atualiza os dados quando o usuário volta para a página
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                console.log("DEBUG: Página retornou ao foco. Atualizando dados do cardápio.");
                 loadMenuAndRender();
             }
         });
-
-        // --- Lógica de Instalação do PWA ---
 
         function isPwaInstalled() {
             if (window.matchMedia('(display-mode: standalone)').matches) {
