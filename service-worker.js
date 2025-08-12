@@ -1,4 +1,4 @@
-const CACHE_NAME = 'saborelli-menu-v2';
+const CACHE_NAME = 'saborelli-menu-v3';
 const urlsToCache = [
   './',
   'index.html',
