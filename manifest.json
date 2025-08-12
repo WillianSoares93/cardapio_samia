@@ -5,7 +5,7 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "description": "Cardápio online da Sâmia - Pizzaria Artesanal, com opção de PWA para instalação.",
+  "description": "Cardápio online da Sâmia - Pizzaria e Hamburgueria, com opção de PWA para instalação.",
   "icons": [
     {
       "src": "https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png",
