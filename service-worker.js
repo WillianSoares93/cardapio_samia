@@ -1,4 +1,4 @@
-const CACHE_NAME = 'samia-menu-v1';
+const CACHE_NAME = 'samia-menu-v0';
 const urlsToCache = [
   './',
   'index.html',
