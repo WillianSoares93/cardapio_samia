@@ -1,72 +1,3121 @@
-// Este arquivo é uma função Serverless para o Vercel.
-// Ele é responsável por buscar os dados do cardápio, promoções, taxas de entrega
-// e agora os ingredientes de hambúrguer e informações de contato de planilhas Google Sheets publicadas como CSV e retorná-los para a aplicação front-end.
-//
-// Para garantir que o Node.js no ambiente Vercel trate este arquivo como um módulo ES (permitindo 'import'),
-// você deve ter "type": "module" no seu arquivo package.json.
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sâmia - Cardápio Online</title>
+    <!-- Inclui a biblioteca Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclui a biblioteca Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Favicon: Define o logótipo como ícone da aba do navegador -->
+    <link rel="icon" href="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" type="image/png">
+    
+    <!-- Adicionado para PWA: Link para o arquivo de manifesto -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Biblioteca para gerar QR Code -->
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
 
-import fetch from 'node-fetch'; // Importa a biblioteca 'node-fetch' para fazer requisições HTTP
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f4e9; /* Cor de fundo suave */
+        }
+        
+        /* Estilos para os cartões de sabor (pizza/bebida) */
+        .flavor-card {
+            transition: all 0.3s ease;
+        }
+        .flavor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        /* Estilos para os botões de pedido */
+        .btn-order {
+            /* Mantido o gradiente laranja para vermelho para um toque vibrante */
+            background: linear-gradient(135deg, #f59e0b, #ef4444); 
+            transition: all 0.3s ease;
+        }
+        .btn-order:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* Estilo para o botão "Adicionar mais" (mantido em tom amarelo/laranja para contraste) */
+        .btn-add-more {
+            background: linear-gradient(135deg, #fbbf24, #fcd34d); 
+            transition: all 0.3s ease;
+        }
+        .btn-add-more:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 10px rgba(251, 191, 36, 0.4);
+        }
 
-// URLs das suas planilhas Google Sheets publicadas como CSV.
-// É CRÍTICO que estas URLs estejam corretas e que as planilhas estejam configuradas
-// para serem "Visíveis para qualquer pessoa com o link".
-const CARDAPIO_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=664943668&single=true&output=csv'; 
-const PROMOCOES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=600393470&single=true&output=csv'; 
-const DELIVERY_FEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=1695668250&single=true&output=csv';
-const INGREDIENTES_HAMBURGUER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=1816106560&single=true&output=csv';
-const CONTACT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=2043568216&single=true&output=csv';
+        /* Estilo para o cabeçalho com imagem de fundo (overlay vermelho já presente) */
+        .header-bg {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://invexo.com.br/blog/wp-content/uploads/2022/12/pizza-pizzaria-gavea-rio-de-janeiro.jpg');
+            background-size: cover;
+            background-position: center;
+        }
 
-// A função principal que será exportada e executada pelo Vercel.
-// 'req' é o objeto de requisição (request) e 'res' é o objeto de resposta (response).
-export default async (req, res) => {
-    // Define cabeçalhos de cache para otimizar o desempenho no Vercel.
-    res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate'); 
+        /* Estilos para o modal principal (usado para seleção de pizza) */
+        .modal {
+            display: none; /* Oculto por padrão */
+            position: fixed; /* Posição fixa na tela */
+            z-index: 1000; /* Acima de outros elementos */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Habilita rolagem se o conteúdo for muito grande */
+            background-color: rgba(0,0,0,0.4); /* Fundo escuro semitransparente */
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            border: 2px solid #ef4444; /* Borda vermelha */
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { transform: translateY(0); }
+        }
 
-    try {
-        console.log('Vercel Function: Iniciando processo de busca de dados...');
+        /* Estilos para o modal de mensagem */
+        .message-modal {
+            display: none; /* Oculto por padrão */
+            position: fixed; /* Posição fixa na tela */
+            z-index: 1001; /* Acima de outros elementos */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Habilita rolagem se o conteúdo for muito grande */
+            background-color: rgba(0,0,0,0.4); /* Fundo escuro semitransparente */
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .message-modal-content {
+            background-color: #fefefe; /* Revertido para cor neutra */
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            text-align: center;
+            animation: fadeIn 0.3s ease-out;
+        }
 
-        // Função auxiliar para buscar dados de uma URL
-        const fetchData = async (url, name) => {
-            console.log(`Vercel Function: Tentando buscar dados de ${name} da URL:`, url);
-            const response = await fetch(url);
-            if (!response.ok) {
-                const errorText = await response.text(); 
-                console.error(`Vercel Function: Erro HTTP ao buscar ${name}. Status: ${response.status}, StatusText: ${response.statusText}. Corpo da Resposta (parcial): ${errorText.substring(0, 200)}...`);
-                throw new Error(`Falha ao buscar ${name}: ${response.statusText || 'Erro desconhecido'}`);
+        /* Estilos para o popup de promoção */
+        .promotion-popup {
+            display: none; /* Oculto por padrão */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .promotion-popup-content {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            animation: popIn 0.4s ease-out;
+            border: 3px solid #dc2626; /* Borda vermelha para promoções */
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .promotion-popup-content h3 {
+            font-size: 2.25rem;
+            font-weight: bold;
+            color: #dc2626;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .promotion-popup-content p {
+            font-size: 1.125rem;
+            color: #374151;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .promotion-popup-content .close-button {
+            top: 15px;
+            right: 25px;
+            font-size: 32px;
+            color: #6b7280;
+        }
+
+        .promotion-popup-content .close-button:hover {
+            color: #1f2937;
+        }
+
+        .promotion-item {
+            background-color: #fee2e2; /* Fundo vermelho claro para itens de promoção */
+            border: 1px solid #ef4444; /* Borda vermelha */
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .promotion-item h4 {
+            font-weight: bold;
+            color: #dc2626; /* Título vermelho */
+            margin-bottom: 5px;
+        }
+
+        .promotion-item p {
+            font-size: 0.95rem;
+            color: #4b5563;
+            margin-bottom: 5px;
+        }
+
+        .promotion-item .price {
+            font-weight: bold;
+            color: #dc2626; /* Preço vermelho */
+            font-size: 1.1rem;
+        }
+
+        /* Estilos para o botão flutuante de promoção */
+        #promotion-button {
+            display: none; /* Oculto por padrão, será exibido via JS */
+            position: fixed;
+            bottom: 20px;
+            left: 20px; /* Posição à esquerda */
+            background-color: #dc2626; /* Vermelho vibrante */
+            color: white;
+            padding: 15px 20px;
+            border-radius: 50px; /* Formato de pílula */
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            z-index: 1500; /* Acima da maioria dos elementos, mas abaixo dos modais */
+            transition: background-color 0.3s ease;
+            animation: pulse 1.5s infinite; /* Animação de piscar */
+            align-items: center;
+            gap: 8px;
+        }
+
+        #promotion-button:hover {
+            background-color: #b91c1c; /* Vermelho mais escuro no hover */
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } /* Usando rgba do red-600 */
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        /* Estilos para os desenhos de pizza no modal de seleção */
+        .pizza-size-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px; /* Reduzido o padding */
+            background-color: #f9fafb; /* Fundo cinza claro */
+            border: 2px solid #e5e7eb; /* gray-200 */
+            border-radius: 10px; /* Mais arredondado */
+            cursor: pointer;
+            transition: all 0.3s ease-in-out; /* Transição mais suave */
+            text-align: center;
+            flex-shrink: 0; /* Prevents items from shrinking */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* Sombra sutil */
+        }
+        .pizza-size-option:hover {
+            border-color: #dc2626; /* red-600 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15); /* Sombra mais intensa no hover */
+            transform: translateY(-4px); /* Efeito de elevação maior */
+        }
+        .pizza-size-option img {
+            margin-bottom: 8px;
+            width: 100px;
+            height: 70px;
+            object-fit: contain;
+        }
+        .pizza-size-option .font-bold.text-lg {
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        .pizza-size-option .text-red-600.font-bold {
+            font-size: 1.125rem;
+            color: #dc2626;
+        }
+        .pizza-size-option button {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        /* Custom styles for sticky category bar on mobile */
+        @media (max-width: 1023px) { /* Applies to screens smaller than 'lg' breakpoint */
+            .category-bar-mobile-sticky {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background-color: #f9fafb; /* bg-gray-50 */
+                padding-top: 1rem; /* pt-4 */
+                padding-bottom: 0.5rem; /* pb-2 */
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* subtle shadow */
             }
-            const data = await response.text();
-            console.log(`Vercel Function: Dados de ${name} buscados com sucesso.`);
-            return data;
+        }
+
+        /* Adicionado para ajustar a rolagem para as seções, considerando a barra fixa */
+        .pizza-category-section {
+            scroll-margin-top: 6rem; /* Ajuste este valor se a altura da barra fixa mudar */
+        }
+
+        /* Estilos para os itens de bebida sugeridos no modal */
+        .suggested-drink-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f0fdf4; /* green-50 */
+            border: 1px solid #dcfce7; /* green-100 */
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .suggested-drink-item .drink-name {
+            font-weight: 600;
+            color: #16a34a; /* green-600 */
+        }
+        .suggested-drink-item .drink-price {
+            font-weight: 700;
+            color: #15803d; /* green-700 */
+        }
+        .suggested-drink-item button {
+            background-color: #22c55e; /* green-500 */
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .suggested-drink-item button:hover {
+            background-color: #16a34a; /* green-600 */
+        }
+        
+        /* Estilos para o botão de confirmar endereço com gradiente verde */
+        .btn-confirm-green {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            transition: all 0.3s ease;
+        }
+        .btn-confirm-green:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        /* CSS para a animação do item voando para o carrinho */
+        .fly-to-cart-animation {
+            position: fixed;
+            background-color: #ef4444; /* Red-500 */
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            z-index: 9999; /* Acima de tudo */
+            pointer-events: none; /* Não interfere com cliques */
+            animation: flyToCart 0.8s ease-in-out forwards;
+            opacity: 1;
+            overflow: hidden; /* Garante que a imagem não saia do círculo */
+        }
+
+        .fly-to-cart-animation img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Garante que a imagem preencha o círculo */
+        }
+
+        @keyframes flyToCart {
+            0% {
+                left: var(--start-x);
+                top: var(--start-y);
+                transform: scale(1);
+                opacity: 1;
+            }
+            70% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+            100% {
+                left: var(--end-x);
+                top: var(--end-y);
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Estilos para as opções de pagamento no modal */
+        .payment-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .payment-option:hover {
+            background-color: #f9fafb; /* gray-50 */
+            border-color: #dc2626; /* red-600 */
+        }
+        .payment-option.selected {
+            background-color: #fee2e2; /* red-100 */
+            border-color: #dc2626; /* red-600 */
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+        .payment-option input[type="radio"] {
+            margin-right: 12px;
+            accent-color: #dc2626; /* red-600 */
+        }
+        .payment-option .icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+            color: #4b5563; /* gray-600 */
+        }
+        .payment-option .text-content {
+            flex-grow: 1;
+        }
+        .payment-option .text-content h4 {
+            font-weight: 600;
+            color: #1f2937; /* gray-900 */
+        }
+        .payment-option .text-content p {
+            font-size: 0.875rem;
+            color: #6b7280; /* gray-500 */
+        }
+
+        /* Estilos para o modal de endereço */
+        .address-modal {
+            display: none; /* Oculto por padrão */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .address-modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            border: 2px solid #ef4444;
+        }
+        /* Estilo para o placeholder quando não há imagem */
+        .no-image-placeholder {
+            background-color: #dc2626; /* red-600 */
+            height: 160px; /* Mesma altura das imagens para manter o layout consistente */
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            object-fit: cover;
+        }
+        
+        /* Estilos para o modal de montagem de hambúrguer */
+        .burger-builder-modal {
+            max-width: 600px;
+        }
+        .ingredient-category {
+            margin-bottom: 24px;
+        }
+        .ingredient-category h4 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .ingredient-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9fafb;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #e5e7eb;
+        }
+        .ingredient-option:hover {
+            border-color: #dc2626;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+        .ingredient-option input[type="radio"],
+        .ingredient-option input[type="checkbox"] {
+            margin-right: 12px;
+            accent-color: #dc2626;
+        }
+        .ingredient-option label {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+        .ingredient-option .price {
+            font-weight: bold;
+            color: #dc2626;
+        }
+        .ingredient-option.selected {
+            background-color: #fee2e2;
+            border-color: #dc2626;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+        
+        .burger-summary {
+            background-color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .burger-summary h5 {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .burger-summary ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .burger-summary li {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <header class="header-bg text-white py-16 px-4 text-center">
+        <div class="max-w-4xl mx-auto">
+            <img src="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" alt="Logotipo Sâmia" class="h-64 mx-auto mb-4 object-contain">
+            <p class="text-2xl mb-8">Pizzaria Artesanal</p>
+            <div class="flex justify-center space-x-4">
+                <a href="#menu" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                    Ver Cardápio
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section id="menu" class="py-8 px-4 max-w-6xl mx-auto">
+        <div class="text-center mb-8">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Nosso Cardápio- teste</h2>
+            <p class="text-gray-600 text-lg mx-auto">Escolha sua pizza favorita ou uma bebida refrescante!</p>
+        </div>
+
+        <div class="text-gray-500 text-sm text-center mb-4 lg:hidden">
+            <i class="fas fa-hand-point-right mr-1"></i> Arraste para o lado para ver outras opções
+        </div>
+
+        <div class="category-bar-mobile-sticky lg:static lg:p-0">
+            <div id="category-buttons-container" class="flex space-x-2 mb-6 overflow-x-auto pb-2 
+                        lg:flex-row lg:space-x-2 lg:mb-6 lg:overflow-visible lg:pb-0">
+            </div>
+        </div>
+        
+        <div id="pizza-list">
+            <div id="dynamic-pizza-sections"></div>
+        </div>
+    </section>
+
+    <div id="orderSidebar" class="fixed top-0 right-0 h-full w-full bg-white shadow-xl z-50 transform translate-x-full transition-transform duration-300 overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Seu Pedido</h3>
+                <button onclick="closeOrderSidebar()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="orderItems" class="mb-6">
+                <p class="text-gray-500 text-center py-8" id="emptyOrderMessage">Seu pedido está vazio</p>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-4 mb-6">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Subtotal:</span>
+                    <span id="subtotal" class="font-bold">R$ 0,00</span>
+                </div>
+
+                <div id="discount-section" class="flex justify-between items-center mb-2 hidden text-red-600">
+                    <span class="text-gray-600">Desconto: <span id="discount-percentage-display"></span></span>
+                    <span id="discount-value-display" class="font-bold">- R$ 0,00</span>
+                </div>
+                
+                <div id="deliveryFeeSection" class="flex justify-between mb-2">
+                    <span class="text-gray-600">Taxa de entrega:</span>
+                    <div id="deliveryFeeContainer" class="flex items-center">
+                        <span id="deliveryFeeDisplay" class="font-bold"></span>
+                        <button id="informAddressBtn" class="ml-2 px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition hidden">
+                            Informar Endereço
+                        </button>
+                        <button id="editDeliveryAddressBtn" class="ml-2 text-blue-500 hover:text-blue-700 text-sm hidden">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span id="total">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div id="address-summary-section" class="border border-gray-200 rounded-lg p-4 mb-6 bg-gray-50 hidden">
+                <h4 class="font-bold text-gray-800 mb-2">Detalhes da Entrega:</h4>
+                <p id="client-name-display" class="text-gray-700 text-sm"></p>
+                <p id="address-display" class="text-gray-700 text-sm"></p>
+                <p id="neighborhood-display" class="text-gray-600 text-sm"></p>
+                <p id="reference-display" class="text-gray-600 text-sm italic"></p>
+                <button id="editAddressBtn" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition">
+                    Editar Detalhes
+                </button>
+            </div>
+
+            <button onclick="backToMenu()" class="btn-add-more w-full py-3 text-white font-bold rounded-full mb-4">
+                Adicionar mais
+            </button>
+
+            <button id="checkoutButton" onclick="handleCheckoutFlow()" class="btn-order w-full py-3 text-white font-bold rounded-full mb-4">
+                Finalizar Pedido
+            </button>
+            
+            </div>
+    </div>
+
+    <div id="pizza-option-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-pizza-option-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-pizza-name"></h3>
+            <p class="text-gray-600 mb-6" id="modal-pizza-description"></p>
+            <div id="pizza-size-options" class="grid grid-cols-1 sm:grid-cols-3 gap-2 justify-items-center">
+                </div>
+        </div>
+    </div>
+    
+    <div id="burger-builder-modal" class="modal">
+        <div class="modal-content burger-builder-modal">
+            <span class="close-button" id="close-burger-builder-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Monte Seu Hambúrguer</h3>
+            
+            <div id="burger-ingredients-container" class="mb-4">
+                </div>
+            
+            <div class="flex justify-between items-center bg-gray-100 p-4 rounded-lg mt-4">
+                <span class="text-lg font-bold">Total:</span>
+                <span id="burger-total-price" class="text-2xl font-bold text-red-600">R$ 0,00</span>
+            </div>
+            
+            <button id="add-custom-burger-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition w-full">
+                Adicionar ao Pedido
+            </button>
+        </div>
+    </div>
+
+    <div id="message-modal" class="message-modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-message-modal">&times;</span>
+            <p class="text-lg font-semibold text-gray-800 mb-4" id="message-modal-text"></p>
+            <button id="ok-message-modal" class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">OK</button>
+        </div>
+    </div>
+
+    <div id="promotion-popup" class="promotion-popup">
+        <div class="modal-content">
+            <span class="close-button" id="close-promotion-popup">&times;</span>
+            <h3>Promoções Especiais!</h3>
+            <p>Confira as nossas ofertas exclusivas e não perca tempo!</p>
+            <div id="promotions-list">
+                </div>
+            <button id="close-promotion-popup-btn" class="px-6 py-3 mt-6 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition w-full">
+                Fechar Promoções
+            </button>
+        </div>
+    </div>
+
+    <button id="promotion-button" class="hidden">
+        <i class="fas fa-tags text-xl"></i>
+        <span>Promoções!</span>
+    </button>
+
+    <div class="fixed bottom-6 right-6 z-40">
+        <button onclick="toggleOrderSidebar()" class="bg-red-600 hover:bg-red-700 text-white rounded-full p-5 shadow-lg relative transition duration-300 transform hover:scale-110" id="cart-button">
+            <i class="fas fa-shopping-cart text-2xl"></i>
+            <span id="cartCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full h-7 w-7 flex items-center justify-center hidden">0</span>
+        </button>
+    </div>
+
+    <div id="drink-suggestion-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-drink-suggestion-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Que tal adicionar uma bebida?</h3>
+            <p class="text-gray-600 mb-6">Seu pedido não contém bebidas. Gostaria de adicionar alguma?</p>
+            <button onclick="backToOrderSidebarFromDrinkSuggestion()" class="px-4 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition w-full mb-3 whitespace-nowrap text-sm">
+                Voltar ao Pedido
+            </button>
+            <button id="proceed-without-drinks" class="btn-order w-full py-3 text-white font-bold rounded-full mb-6 whitespace-nowrap text-sm">
+                Finalizar sem Bebidas
+            </button>
+            <div id="suggested-drinks-list" class="flex flex-col gap-3 mb-6">
+                </div>
+        </div>
+    </div>
+
+    <div id="confirm-no-drink-modal" class="message-modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-confirm-no-drink-modal">&times;</span>
+            <p class="text-lg font-semibold text-gray-800 mb-4">Pedir sem uma bebida?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirm-no-drink-yes" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition">Sim!</button>
+                <button id="confirm-no-drink-no-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Não!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="install-prompt-modal" class="message-modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-install-prompt-modal">&times;</span>
+            <p class="text-lg font-semibold text-gray-800 mb-4">Instale o App Sâmia Cardápio para uma experiência completa!</p>
+            <p class="text-gray-600 mb-6">Adicione nosso aplicativo à sua tela inicial para acesso rápido e fácil.</p>
+            <button id="install-app-button" class="px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition w-full">
+                Instalar Aplicativo
+            </button>
+        </div>
+    </div>
+
+    <div id="payment-method-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-payment-method-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Escolha a Forma de Pagamento</h3>
+            <p class="text-gray-600 text-lg mb-4">Total Pedido: <span id="payment-modal-total" class="font-bold text-red-600">R$ 0,00</span></p>
+
+            <div id="payment-options-container" class="flex flex-col gap-3 mb-6">
+                <label class="payment-option" data-method="Dinheiro">
+                    <input type="radio" name="paymentMethod" value="Dinheiro" class="form-radio">
+                    <i class="fas fa-money-bill-wave icon"></i>
+                    <div class="text-content">
+                        <h4>Dinheiro</h4>
+                        <p></p> </div>
+                </label>
+                <label class="payment-option" data-method="Cartão de Crédito/Débito">
+                    <input type="radio" name="paymentMethod" value="Cartão de Crédito/Débito" class="form-radio">
+                    <i class="fas fa-credit-card icon"></i>
+                    <div class="text-content">
+                        <h4>Cartão de Crédito/Débito</h4>
+                        <p></p> </div>
+                </label>
+                <label class="payment-option" data-method="Pix">
+                    <input type="radio" name="paymentMethod" value="Pix" class="form-radio">
+                    <i class="fas fa-qrcode icon"></i>
+                    <div class="text-content flex flex-col items-start w-full">
+                        <h4 class="flex-grow">Pix</h4>
+                        <div id="pix-key-container" class="hidden mt-2 p-2 bg-gray-100 rounded-md text-sm w-full flex items-center justify-between">
+                            <span id="pix-key-display" class="font-mono text-gray-700 text-sm truncate"></span>
+                            <button id="copy-pix-btn" class="ml-2 text-gray-500 hover:text-gray-700" title="Copiar Chave Pix">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <span id="copy-feedback" class="text-green-600 text-xs ml-2 hidden">Copiado!</span>
+                        </div>
+                         <!-- Adicionado o contêiner para o QR Code -->
+                        <div id="qrcode" class="mt-4 mx-auto"></div>
+                    </div>
+                </label>
+            </div>
+
+            <div id="troco-input-container" class="hidden mt-4 mb-6 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                <label for="trocoPara" class="block text-gray-700 text-sm font-bold mb-2">
+                    Troco para (R$):
+                </label>
+                <input type="number" id="trocoPara" step="0.01" min="0" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2">
+                <p class="text-gray-600 text-sm">
+                    Troco total: <span id="trocoTotalDisplay" class="font-bold text-red-600">R$ 0,00</span>
+                </p>
+            </div>
+
+            <button id="confirm-payment-method-btn" class="px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition w-full">
+                Confirmar Pagamento
+            </button>
+        </div>
+    </div>
+
+    <div id="address-input-modal" class="address-modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-address-modal">&times;</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Informe seus Dados</h3>
+             <div class="mb-4">
+                <label for="clientNameInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Nome do Cliente:
+                </label>
+                <input type="text" id="clientNameInput" placeholder="Seu nome" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4">
+                <label for="neighborhoodSelect" class="block text-gray-700 text-sm font-bold mb-2">
+                    Bairro:
+                </label>
+                <select id="neighborhoodSelect" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="">Selecione um bairro</option>
+                    </select>
+            </div>
+            <div class="mb-4">
+                <label for="streetInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Rua:
+                </label>
+                <input type="text" id="streetInput" placeholder="Nome da Rua" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <label for="numberInput" class="block text-gray-700 text-sm font-bold">
+                        Número:
+                    </label>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="noNumberCheckbox" class="form-checkbox text-red-600">
+                        <label for="noNumberCheckbox" class="ml-2 text-gray-700 text-sm">Sem Número</label>
+                    </div>
+                </div>
+                <input type="number" inputmode="numeric" id="numberInput" placeholder="Número" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-6">
+                <label for="referencePointInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Ponto de Referência (Opcional):
+                </label>
+                <input type="text" id="referencePointInput" placeholder="Ex: Próximo à praça" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <button id="confirmAddressBtn" class="btn-confirm-green w-full py-2 px-4 rounded-full text-white font-bold transition duration-300">
+                Confirmar Dados
+            </button>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-8 px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+                <div>
+                    <h3 class="xl font-bold mb-4">Sâmia</h3>
+                    <p class="text-gray-400">As melhores pizzas artesanais da cidade, feitas com ingredientes frescos e muito carinho.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Horário de Funcionamento</h3>
+                    <p class="text-gray-400">Segunda a Sábado: 18:00 - 23:00</p>
+                    <p class="text-gray-400">Domingo: 17:00 - 22:00</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Contato</h3>
+                    <p class="text-gray-400"><i class="fas fa-phone mr-2"></i> <span id="footer-phone"></span></p>
+                    <p class="text-gray-400"><i class="fas fa-envelope mr-2"></i> <span id="footer-email"></span></p>
+                    <div class="flex justify-center md:justify-start space-x-4 mt-2" id="social-links-container">
+                        </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+                <p>&copy; 2023 Sâmia. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Variáveis globais
+        let order = [];
+        let allMenuData = [];
+        let allPromotionsData = [];
+        let deliveryFeesData = [];
+        let allBurgerIngredients = {};
+        let isSelectingHalfPizza = false; 
+        let isFirstHalfPromotional = false; 
+        let deferredPrompt; 
+        let selectedPaymentMethod = null; 
+        let isCheckoutInitiated = false; 
+        let discountPromotion = null; // Variável global para a promoção de desconto
+        let contactInfo = {};
+        
+        let selectedAddress = {
+            clientName: null, 
+            bairro: null,
+            rua: null,
+            numero: null,
+            referencia: null,
+            deliveryFee: 0.00
         };
 
-        // --- Busca de dados em paralelo para otimizar o tempo de resposta ---
-        const [
-            cardapioData,
-            promocoesData,
-            deliveryFeesData,
-            ingredientesHamburguerData,
-            contactData
-        ] = await Promise.all([
-            fetchData(CARDAPIO_CSV_URL, 'Cardápio'),
-            fetchData(PROMOCOES_CSV_URL, 'Promoções'),
-            fetchData(DELIVERY_FEES_CSV_URL, 'Taxas de Entrega'),
-            fetchData(INGREDIENTES_HAMBURGUER_CSV_URL, 'Ingredientes de Hambúrguer'),
-            fetchData(CONTACT_CSV_URL, 'Informações de Contato')
-        ]);
+        const defaultImage = 'https://www.bakelitsul.com.br/Assets/img/sem-produto-detalhe.png';
+        
+        // URL da nova planilha de contatos
+        const CONTACT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=2043568216&single=true&output=csv';
 
-        // --- Envia a resposta de sucesso ---
-        console.log('Vercel Function: Todos os dados foram buscados com sucesso. Enviando resposta JSON.');
-        res.status(200).json({
-            cardapio: cardapioData,
-            promocoes: promocoesData,
-            deliveryFees: deliveryFeesData,
-            ingredientesHamburguer: ingredientesHamburguerData,
-            contact: contactData
+        // Referências para os elementos DOM
+        const orderSidebar = document.getElementById('orderSidebar');
+        const cartCount = document.getElementById('cartCount');
+        const emptyOrderMessage = document.getElementById('orderItems').querySelector('#emptyOrderMessage');
+        const messageModal = document.getElementById('message-modal');
+        const closeMessageModalBtn = document.getElementById('close-message-modal');
+        const okMessageModalBtn = document.getElementById('ok-message-modal');
+        const messageModalText = document.getElementById('message-modal-text');
+        const promotionPopup = document.getElementById('promotion-popup');
+        const closePromotionPopupBtn = document.getElementById('close-promotion-popup');
+        const closePromotionPopupBtnBottom = document.getElementById('close-promotion-popup-btn');
+        const promotionsListEl = document.getElementById('promotions-list');
+        const promotionButton = document.getElementById('promotion-button'); 
+        const cartButton = document.getElementById('cart-button'); 
+        const subtotalEl = document.getElementById('subtotal');
+        const deliveryFeeDisplay = document.getElementById('deliveryFeeDisplay');
+        const totalEl = document.getElementById('total');
+        const checkoutButton = document.getElementById('checkoutButton');
+
+        // Referências para o modal de seleção de pizza
+        const pizzaOptionModal = document.getElementById('pizza-option-modal');
+        const closePizzaOptionModalBtn = document.getElementById('close-pizza-option-modal');
+        const modalPizzaName = document.getElementById('modal-pizza-name');
+        const modalPizzaDescription = document.getElementById('modal-pizza-description');
+        const pizzaSizeOptions = document.getElementById('pizza-size-options');
+        
+        // NOVO: Referências para o modal de montagem de hambúrguer
+        const burgerBuilderModal = document.getElementById('burger-builder-modal');
+        const closeBurgerBuilderModalBtn = document.getElementById('close-burger-builder-modal');
+        const burgerIngredientsContainer = document.getElementById('burger-ingredients-container');
+        const burgerTotalPriceEl = document.getElementById('burger-total-price');
+        const addCustomBurgerBtn = document.getElementById('add-custom-burger-btn');
+
+        // Referências para o novo modal de sugestão de bebidas
+        const drinkSuggestionModal = document.getElementById('drink-suggestion-modal');
+        const closeDrinkSuggestionModalBtn = document.getElementById('close-drink-suggestion-modal');
+        const suggestedDrinksList = document.getElementById('suggested-drinks-list');
+        const proceedWithoutDrinksBtn = document.getElementById('proceed-without-drinks'); 
+
+        // Referências para o modal de confirmação de pedido sem bebida
+        const confirmNoDrinkModal = document.getElementById('confirm-no-drink-modal');
+        const closeConfirmNoDrinkModalBtn = document.getElementById('close-confirm-no-drink-modal');
+        const confirmNoDrinkYesBtn = document.getElementById('confirm-no-drink-yes');
+        const confirmNoDrinkNoBtn = document.getElementById('confirm-no-drink-no-btn');
+
+        // Referências para o modal de instalação do PWA
+        const installPromptModal = document.getElementById('install-prompt-modal');
+        const closeInstallPromptModalBtn = document.getElementById('close-install-prompt-modal');
+        const installAppButton = document.getElementById('install-app-button');
+
+        // Referências para o modal de seleção de forma de pagamento
+        const paymentMethodModal = document.getElementById('payment-method-modal');
+        const closePaymentMethodModalBtn = document.getElementById('close-payment-method-modal');
+        const paymentOptionsContainer = document.getElementById('payment-options-container');
+        const confirmPaymentMethodBtn = document.getElementById('confirm-payment-method-btn');
+        const trocoInputContainer = document.getElementById('troco-input-container'); 
+        const trocoParaInput = document.getElementById('trocoPara'); 
+        const trocoTotalDisplay = document.getElementById('trocoTotalDisplay'); 
+        const paymentModalTotal = document.getElementById('payment-modal-total'); 
+        const pixKeyContainer = document.getElementById('pix-key-container');
+        const pixKeyDisplay = document.getElementById('pix-key-display');
+        const copyPixBtn = document.getElementById('copy-pix-btn');
+        const copyFeedback = document.getElementById('copy-feedback');
+
+
+        // Referências para elementos do modal de endereço
+        const addressInputModal = document.getElementById('address-input-modal');
+        const closeAddressModalBtn = document.getElementById('close-address-modal');
+        const clientNameInput = document.getElementById('clientNameInput');
+        const neighborhoodSelect = document.getElementById('neighborhoodSelect');
+        const streetInput = document.getElementById('streetInput');
+        const numberInput = document.getElementById('numberInput');
+        const noNumberCheckbox = document.getElementById('noNumberCheckbox'); // NOVO: Checkbox "Sem Número"
+        const referencePointInput = document.getElementById('referencePointInput');
+        const confirmAddressBtn = document.getElementById('confirmAddressBtn');
+        const addressSummarySection = document.getElementById('address-summary-section');
+        const clientNameDisplay = document.getElementById('client-name-display');
+        const addressDisplay = document.getElementById('address-display');
+        const neighborhoodDisplay = document.getElementById('neighborhood-display');
+        const referenceDisplay = document.getElementById('reference-display');
+        const editAddressBtn = document.getElementById('editAddressBtn');
+        const informAddressBtn = document.getElementById('informAddressBtn');
+        const editDeliveryAddressBtn = document.getElementById('editDeliveryAddressBtn');
+        
+        // Referências para os novos elementos de desconto
+        const discountSection = document.getElementById('discount-section');
+        const discountPercentageDisplay = document.getElementById('discount-percentage-display');
+        const discountValueDisplay = document.getElementById('discount-value-display');
+
+        // Referências para elementos do rodapé
+        const footerPhone = document.getElementById('footer-phone');
+        const footerEmail = document.getElementById('footer-email');
+        const socialLinksContainer = document.getElementById('social-links-container');
+
+
+        let currentPizzaData = {}; 
+        let firstHalfPizza = null; 
+        let isSelectingSecondHalf = false; 
+
+        // Define tamanhos e seus multiplicadores de preço em relação ao preço de 8 fatias
+        const sizes = [
+            { slices: 4, label: '4 Fatias', priceKey: 'price4Slices' },
+            { slices: 6, label: '6 Fatias', priceKey: 'price6Slices' },
+            { slices: 8, label: '8 Fatias', priceKey: 'basePrice' } 
+        ];
+        
+        // Funções de controle de modais e sidebar
+        function toggleOrderSidebar() {
+            orderSidebar.classList.toggle('translate-x-full');
+            orderSidebar.classList.toggle('translate-x-0');
+
+            if (orderSidebar.classList.contains('translate-x-0')) {
+                promotionButton.style.display = 'none';
+                orderSidebar.scrollTop = orderSidebar.scrollHeight;
+            } else {
+                updatePromotionButtonVisibility();
+            }
+        }
+        
+        function closeOrderSidebar() {
+            orderSidebar.classList.add('translate-x-full');
+            orderSidebar.classList.remove('translate-x-0');
+            updatePromotionButtonVisibility(); 
+        }
+        
+        function showMessageModal(message, onOkCallback = null) {
+            console.log('DEBUG: showMessageModal chamado com:', message);
+            messageModalText.textContent = message;
+            messageModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
+
+            okMessageModalBtn.removeEventListener('click', hideMessageModal);
+            closeMessageModalBtn.removeEventListener('click', hideMessageModal);
+            messageModal.onclick = null; 
+
+            if (onOkCallback) {
+                const specificAction = () => {
+                    hideMessageModal();
+                    onOkCallback();
+                };
+                okMessageModalBtn.addEventListener('click', specificAction);
+                closeMessageModalBtn.addEventListener('click', specificAction);
+                messageModal.onclick = (event) => {
+                    if (event.target === messageModal) {
+                        specificAction();
+                    }
+                };
+            } else {
+                okMessageModalBtn.addEventListener('click', hideMessageModal);
+                closeMessageModalBtn.addEventListener('click', hideMessageModal);
+                messageModal.onclick = (event) => {
+                    if (event.target === messageModal) {
+                        hideMessageModal();
+                    }
+                };
+            }
+        }
+
+        function hideMessageModal() {
+            messageModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        }
+
+        function resetHalfPizzaSelection() {
+            if (isSelectingHalfPizza && firstHalfPizza) {
+                const pendingHalfIndex = order.findIndex(orderItem => orderItem.id === 'pending-half-pizza');
+                if (pendingHalfIndex > -1) {
+                    order.splice(pendingHalfIndex, 1);
+                    updateOrderDisplay(); 
+                }
+                firstHalfPizza = null;
+                isSelectingSecondHalf = false;
+                isSelectingHalfPizza = false;
+                isFirstHalfPromotional = false;
+                toggleAddItemButtons(true);
+                toggleCategoryButtons(true);
+                showMessageModal('Seleção de meia pizza cancelada.');
+            }
+        }
+
+        closePizzaOptionModalBtn.addEventListener('click', function() {
+            pizzaOptionModal.style.display = 'none';
+            updatePromotionButtonVisibility(); 
+            resetHalfPizzaSelection();
         });
 
-    } catch (error) {
-        // --- Tratamento de Erros ---
-        console.error('Vercel Function: Erro fatal capturado no bloco try-catch:', error.message);
-        res.status(500).json({ error: `Erro interno no servidor ao carregar dados: ${error.message}` });
-    }
-};
+        window.addEventListener('click', function(event) {
+            if (event.target == pizzaOptionModal) {
+                pizzaOptionModal.style.display = 'none';
+                updatePromotionButtonVisibility(); 
+                resetHalfPizzaSelection();
+            }
+        });
+
+        closeBurgerBuilderModalBtn.addEventListener('click', () => {
+            burgerBuilderModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target == burgerBuilderModal) {
+                burgerBuilderModal.style.display = 'none';
+            }
+        });
+
+        function getGenericPizzaSliceImage() {
+            return ''; 
+        }
+
+        function parseCsvData(csvText, type) {
+            const lines = csvText.split('\n').filter(line => line.trim() !== '');
+
+            if (lines.length === 0) {
+                console.warn(`DEBUG: Nenhuma linha válida encontrada no CSV de ${type}.`);
+                return [];
+            }
+
+            function parseCsvLine(line) {
+                const values = [];
+                let inQuote = false;
+                let currentField = '';
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuote && i + 1 < line.length && line[i + 1] === '"') {
+                            currentField += '"';
+                            i++;
+                        } else {
+                            inQuote = !inQuote;
+                        }
+                    } else if (char === ',' && !inQuote) {
+                        values.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                values.push(currentField);
+                return values.map(v => {
+                    if (v === undefined || v === null) return '';
+                    let processed = v;
+                    if (processed.startsWith('"') && processed.endsWith('"')) {
+                        processed = processed.substring(1, processed.length - 1);
+                    }
+                    return processed.replace(/""/g, '"').trim();
+                });
+            }
+
+            const headersRaw = parseCsvLine(lines[0]);
+            const mappedHeaders = headersRaw.map(header => {
+                let cleanedHeader = header.trim();
+                switch (cleanedHeader) {
+                    case 'ID Item (único)': return 'id';
+                    case 'Nome do Item': return 'name';
+                    case 'Descrição': return 'description';
+                    case 'Preço 8 fatias': return 'basePrice';
+                    case 'Preço 6 fatias': return 'price6Slices';
+                    case 'Preço 4 fatias': return 'price4Slices';
+                    case 'Categoria': return 'category';
+                    case 'É Pizza? (SIM/NÃO)': return 'isPizza';
+                    case 'É Montável? (SIM/NAO)': return 'isCustomizable';
+                    case 'Disponível (SIM/NÃO)': return 'available'; 
+                    case 'Imagem': return 'imageUrl'; 
+                    case 'ID Promocao': return 'id';
+                    case 'Nome da Promocao': return 'name';
+                    case 'Descrição': return 'description';
+                    case 'Preco Promocional': return 'promoPrice';
+                    case 'ID Item Aplicavel': return 'itemId';
+                    case 'Ativo (SIM/NAO)': return 'active';
+                    case 'Bairros': return 'neighborhood';
+                    case 'Valor Frete': return 'deliveryFee';
+                    case 'ID Intem': return 'id';
+                    case 'Ingredientes': return 'name';
+                    case 'Preço': return 'price';
+                    case 'Categoria': return 'category';
+                    case 'Seleção Única': return 'isSingleChoice';
+                    case 'Limite': return 'limit';
+                    case 'É Obrigatório?(SIM/NÃO)': return 'isRequired';
+                    case 'Disponível': return 'available'; 
+                    case 'Dados': return 'data';
+                    case 'Valor': return 'value';
+                    default: 
+                        if (cleanedHeader.includes('É Montável')) {
+                            return 'isCustomizable';
+                        }
+                        return cleanedHeader.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9]/g, '');
+                }
+            });
+            
+            const parsedData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                const rowValues = parseCsvLine(line);
+                if (rowValues.length === mappedHeaders.length) {
+                    let item = {};
+                    for (let j = 0; j < mappedHeaders.length; j++) {
+                        let headerKey = mappedHeaders[j];
+                        let value = rowValues[j];
+                        
+                        if (['neighborhood', 'name', 'category', 'data'].includes(headerKey) && (value === undefined || value === null || value.trim() === '')) {
+                            value = '';
+                        }
+                        if (['basePrice', 'price6Slices', 'price4Slices', 'promoPrice', 'deliveryFee', 'price'].includes(headerKey)) {
+                            const parsedValue = parseFloat(String(value).replace(',', '.'));
+                            item[headerKey] = isNaN(parsedValue) ? 0 : parsedValue;
+                        } else if (headerKey === 'limit') {
+                            const parsedValue = parseInt(value, 10);
+                            item[headerKey] = isNaN(parsedValue) ? Infinity : parsedValue;
+                        }
+                        else if (['isPizza', 'available', 'active', 'isCustomizable', 'isSingleChoice', 'isRequired'].includes(headerKey)) {
+                            item[headerKey] = value.toUpperCase() === 'SIM' || value.toUpperCase() === 'SIM\r';
+                        } else {
+                            item[headerKey] = value;
+                        }
+                    }
+                    if (type === 'cardapio') {
+                        item.imageUrl = (String(item.imageUrl || '').trim());
+                    }
+
+                    if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees' || (type === 'ingredientesHamburguer' && item.available) || (type === 'contact')) {
+                        parsedData.push(item);
+                    }
+                } else {
+                    console.warn(`DEBUG: Linha ${i + 1} ignorada ou malformada (${type} - esperado ${mappedHeaders.length} colunas, encontrado ${rowValues.length}): "${line}"`);
+                }
+            }
+            console.log(`DEBUG: Dados parseados para ${type}:`, parsedData);
+            return parsedData;
+        }
+
+        function openBurgerBuilderModal(baseBurgerItem) {
+            console.log('DEBUG: openBurgerBuilderModal: Abrindo modal de montagem de hambúrguer.');
+            burgerIngredientsContainer.innerHTML = '';
+            burgerBuilderModal.dataset.basePrice = baseBurgerItem.basePrice;
+            
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                if (ingredients.length > 0) {
+                    const firstIngredient = ingredients[0];
+                    const isSingleChoice = firstIngredient.isSingleChoice;
+                    const limit = firstIngredient.limit || Infinity;
+                    const isRequired = firstIngredient.isRequired || false;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'ingredient-category';
+                    
+                    let categoryTitle = capitalizeFirstLetter(category);
+                    if (isRequired) {
+                        categoryTitle += ' (Obrigatório)';
+                    } else if (!isSingleChoice && limit !== Infinity && limit > 1) {
+                        categoryTitle += ` (Escolha até ${limit})`;
+                    } else if (!isSingleChoice && limit === 1) {
+                        categoryTitle += ` (Escolha 1)`;
+                    } else if (isSingleChoice) {
+                         categoryTitle += ` (Escolha 1)`;
+                    }
+
+                    categoryDiv.innerHTML = `<h4>${categoryTitle}</h4>`;
+                    
+                    ingredients.forEach(ingredient => {
+                        const inputType = isSingleChoice ? 'radio' : 'checkbox';
+                        const inputName = isSingleChoice ? category : `multiple-${category}`;
+                        const priceDisplay = ingredient.price > 0 ? `+ R$ ${ingredient.price.toFixed(2).replace('.', ',')}` : '';
+                        
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'ingredient-option';
+                        
+                        const input = document.createElement('input');
+                        input.type = inputType;
+                        input.id = `${inputName}-${ingredient.id}`;
+                        input.name = inputName;
+                        input.value = ingredient.id;
+                        input.dataset.price = ingredient.price;
+                        input.classList.add('form-radio');
+
+                        const label = document.createElement('label');
+                        label.htmlFor = input.id;
+                        label.innerHTML = `${ingredient.name} <span class="price">${priceDisplay}</span>`;
+
+                        optionDiv.appendChild(input);
+                        optionDiv.appendChild(label);
+                        
+                        // Ouve o evento de clique em toda a div
+                        optionDiv.addEventListener('click', (e) => {
+                            if (e.target.tagName !== 'INPUT') { // Não interfere se o clique for diretamente no checkbox/radio
+                                input.checked = !input.checked;
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+                        
+                        // Ouve o evento de `change` para os inputs
+                        input.addEventListener('change', (e) => {
+                            const currentInput = e.target;
+                            const currentCategory = currentInput.name.replace('multiple-', '');
+                            const isCurrentSingleChoice = allBurgerIngredients[currentCategory][0]?.isSingleChoice;
+                            const limit = allBurgerIngredients[currentCategory][0]?.limit || Infinity;
+                            
+                            // Atualiza a classe 'selected' visualmente
+                            if (isCurrentSingleChoice) {
+                                document.querySelectorAll(`input[name="${currentCategory}"]`).forEach(el => {
+                                    el.closest('.ingredient-option').classList.remove('selected');
+                                });
+                            }
+                            if (currentInput.checked) {
+                                currentInput.closest('.ingredient-option').classList.add('selected');
+                            } else {
+                                currentInput.closest('.ingredient-option').classList.remove('selected');
+                            }
+                            
+                            // Lógica de limite para checkboxes
+                            if (!isSingleChoice && limit !== Infinity) {
+                                const checkedCount = document.querySelectorAll(`input[name="${e.target.name}"]:checked`).length;
+                                if (checkedCount > limit) {
+                                    e.target.checked = false;
+                                    e.target.closest('.ingredient-option').classList.remove('selected');
+                                    showMessageModal(`Você pode escolher no máximo ${limit} item(s) da categoria "${capitalizeFirstLetter(currentCategory)}".`);
+                                }
+                            }
+                            
+                            updateBurgerPrice();
+                        });
+
+                        categoryDiv.appendChild(optionDiv);
+                    });
+                    burgerIngredientsContainer.appendChild(categoryDiv);
+                }
+            }
+            
+            burgerTotalPriceEl.textContent = 'R$ ' + baseBurgerItem.basePrice.toFixed(2).replace('.', ',');
+            
+            addCustomBurgerBtn.onclick = () => addCustomBurgerToOrder(baseBurgerItem);
+            
+            burgerBuilderModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
+        }
+        
+        function updateBurgerPrice() {
+            let total = parseFloat(burgerBuilderModal.dataset.basePrice) || 0;
+            
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                const isSingleChoice = ingredients[0]?.isSingleChoice;
+                
+                if (isSingleChoice) {
+                    const selectedRadio = document.querySelector(`input[name="${category}"]:checked`);
+                    if (selectedRadio) {
+                        total += parseFloat(selectedRadio.dataset.price);
+                    }
+                } else {
+                    document.querySelectorAll(`input[name="multiple-${category}"]:checked`).forEach(checkbox => {
+                        total += parseFloat(checkbox.dataset.price);
+                    });
+                }
+            }
+            
+            burgerTotalPriceEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        }
+
+        function addCustomBurgerToOrder(baseBurgerItem) {
+            const selectedIngredients = [];
+            let total = baseBurgerItem.basePrice;
+            
+            let allRequiredCategoriesFilled = true;
+
+            for (const category in allBurgerIngredients) {
+                const ingredients = allBurgerIngredients[category];
+                const firstIngredient = ingredients[0];
+                const isSingleChoice = firstIngredient?.isSingleChoice;
+                const isRequired = firstIngredient?.isRequired || false;
+
+                if (isRequired) {
+                    const selectedInputs = document.querySelectorAll(`input[name="${isSingleChoice ? category : `multiple-${category}`}"]:checked`);
+                    if (selectedInputs.length === 0) {
+                        showMessageModal(`Por favor, escolha uma opção na categoria "${capitalizeFirstLetter(category)}".`);
+                        allRequiredCategoriesFilled = false;
+                        break;
+                    }
+                }
+
+                if (isSingleChoice) {
+                    const selectedInput = document.querySelector(`input[name="${category}"]:checked`);
+                    if (selectedInput) {
+                        const ingredient = ingredients.find(ing => ing.id === selectedInput.value);
+                        if (ingredient) {
+                            selectedIngredients.push({ name: ingredient.name, category: ingredient.category });
+                            total += ingredient.price;
+                        }
+                    }
+                } else {
+                    document.querySelectorAll(`input[name="multiple-${category}"]:checked`).forEach(input => {
+                        const ingredient = ingredients.find(ing => ing.id === input.value);
+                        if (ingredient) {
+                            selectedIngredients.push({ name: ingredient.name, category: ingredient.category });
+                            total += ingredient.price;
+                        }
+                    });
+                }
+            }
+            
+            if (!allRequiredCategoriesFilled) {
+                return;
+            }
+
+            addToOrder({
+                type: 'custom_burger',
+                name: 'Hambúrguer Personalizado',
+                price: total,
+                description: `Monte seu hambúrguer.`,
+                ingredients: selectedIngredients,
+                category: baseBurgerItem.category
+            }, addCustomBurgerBtn);
+            
+            burgerBuilderModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        }
+
+        function populateMenu(menuItems, orderedCategories) {
+            const dynamicSectionsContainer = document.getElementById('dynamic-pizza-sections');
+            dynamicSectionsContainer.innerHTML = ''; 
+
+            const itemsByCategory = {};
+            menuItems.forEach(item => {
+                if (!itemsByCategory[item.category]) {
+                    itemsByCategory[item.category] = [];
+                }
+                itemsByCategory[item.category].push(item);
+            });
+
+            orderedCategories.forEach(category => {
+                const sectionId = `${category}-section`;
+                let sectionEl = document.getElementById(sectionId);
+
+                if (!sectionEl) {
+                    sectionEl = document.createElement('div');
+                    sectionEl.id = sectionId;
+                    sectionEl.className = 'pizza-category-section mb-8';
+                    sectionEl.innerHTML = `
+                        <h3 class="text-xl font-bold text-white p-2 rounded-md bg-red-600 mb-6">${capitalizeFirstLetter(category)}</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="${category}-items"></div>
+                    `;
+                    dynamicSectionsContainer.appendChild(sectionEl);
+                }
+
+                const categoryItemsEl = document.getElementById(`${category}-items`);
+                categoryItemsEl.innerHTML = ''; 
+
+                if (itemsByCategory[category]) {
+                    itemsByCategory[category].forEach(item => {
+                        if (item.available) { 
+                            let itemHtml = '';
+                            
+                            const trimmedImageUrl = String(item.imageUrl || '').trim();
+                            let imageElement = '';
+
+                            if (trimmedImageUrl.toLowerCase() === 'sem imagem') {
+                                imageElement = `<div class="no-image-placeholder">Sem Imagem</div>`;
+                            } else if (trimmedImageUrl.length > 0) {
+                                imageElement = `<img src="${trimmedImageUrl}" alt="Imagem de ${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='';">`;
+                            } else {
+                                imageElement = '';
+                            }
+
+                            if (item.isPizza) {
+                                let priceDisplayHtml = '';
+                                if (item.price4Slices > 0) {
+                                    priceDisplayHtml += `
+                                        <div class="flex flex-col items-center text-center px-1 flex-shrink-0">
+                                            <span class="font-bold text-gray-800 whitespace-nowrap">4F</span>
+                                            <span class="font-bold text-red-600 text-lg whitespace-nowrap">R$ ${item.price4Slices.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    `;
+                                }
+                                if (item.price4Slices > 0 && (item.price6Slices > 0 || item.basePrice > 0)) {
+                                    priceDisplayHtml += `<span class="text-gray-400 self-center">|</span>`;
+                                }
+                                if (item.price6Slices > 0) {
+                                    priceDisplayHtml += `
+                                        <div class="flex flex-col items-center text-center px-1 flex-shrink-0">
+                                            <span class="font-bold text-gray-800 whitespace-nowrap">6F</span>
+                                            <span class="font-bold text-red-600 text-lg whitespace-nowrap">R$ ${item.price6Slices.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    `;
+                                }
+                                if (item.basePrice > 0) { 
+                                    priceDisplayHtml += `
+                                        <div class="flex flex-col items-center text-center px-1 flex-shrink-0">
+                                            <span class="font-bold text-gray-800 whitespace-nowrap">8F</span>
+                                            <span class="font-bold text-red-600 text-lg whitespace-nowrap">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    `;
+                                }
+                                
+                                itemHtml = `
+                                    <div class="flavor-card bg-white rounded-xl overflow-hidden shadow-lg transition duration-300">
+                                        ${imageElement}
+                                        <div class="p-6">
+                                            <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
+                                            <p class="text-gray-600 text-sm mb-4">${item.description}</p>
+                                            <div class="flex justify-end mt-auto">
+                                                <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
+                                                        data-item-id="${item.id}" data-image-url="${trimmedImageUrl}">
+                                                    Adicionar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+							} else {
+							    let imageElement = '';
+                                const trimmedImageUrl = String(item.imageUrl || '').trim();
+                                if (trimmedImageUrl.toLowerCase() === 'sem imagem') {
+                                    imageElement = `<div class="no-image-placeholder">Sem Imagem</div>`;
+                                } else if (trimmedImageUrl.length > 0) {
+                                    imageElement = `<img src="${trimmedImageUrl}" alt="${item.name}" class="w-full h-40 object-cover" onerror="this.onerror=null;this.src='';">`;
+                                } else {
+                                    imageElement = '';
+                                }
+                                
+                                const buttonText = item.isCustomizable ? 'Montar' : 'Adicionar';
+
+                                itemHtml = `
+                                    <div class="flavor-card bg-white rounded-xl overflow-hidden shadow-lg transition duration-300">
+                                        ${imageElement}
+                                        <div class="p-6">
+                                        <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
+                                        <p class="text-gray-600 text-sm mb-4">${item.description}</p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="font-bold text-red-600 text-lg">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</span>
+                                            <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
+                                            data-item-id="${item.id}">
+                                                ${buttonText}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>										
+                                `;
+							}
+                            categoryItemsEl.insertAdjacentHTML('beforeend', itemHtml);
+                        }
+                    });
+                }
+            });
+
+            attachAddButtonListeners();
+        }
+
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+        }
+
+        function createCategoryButtons(categories) {
+            const categoryButtonsContainer = document.getElementById('category-buttons-container');
+            categoryButtonsContainer.innerHTML = ''; 
+
+            categories.forEach((category, index) => {
+                const button = document.createElement('button');
+                button.className = 'category-btn px-4 py-2 rounded-full bg-gray-200 text-gray-800 whitespace-nowrap lg:flex-grow-0 lg:flex-shrink-0';
+                button.textContent = capitalizeFirstLetter(category);
+                button.dataset.category = category;
+                button.dataset.targetId = `${category}-section`;
+                
+                button.addEventListener('click', function(event) { 
+                    const targetCategory = this.dataset.category;
+                    const targetId = this.dataset.targetId;
+
+                    if (isSelectingHalfPizza && isFirstHalfPromotional) { 
+                        if (targetCategory.toLowerCase() !== 'promocionais') {
+                            event.preventDefault(); 
+                            showMessageModal('Para pizzas promocionais, a segunda metade deve ser também de uma pizza promocional.', () => {
+                                document.getElementById('promocionais-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                setActiveCategoryButton('promocionais');
+                            });
+                            return; 
+                        }
+                    } else if (isSelectingHalfPizza && !isFirstHalfPromotional) { 
+                        if (targetCategory.toLowerCase() === 'promocionais') {
+                            event.preventDefault(); 
+                            showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
+                            return; 
+                        }
+                    }
+
+                    setActiveCategoryButton(targetCategory);
+                    isScrollingFromClick = true;
+                    document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setTimeout(() => {
+                        isScrollingFromClick = false;
+                    }, 700); 
+                });
+                categoryButtonsContainer.appendChild(button);
+
+                if (index === 0) { 
+                    setActiveCategoryButton(category);
+                    currentActiveCategoryByScroll = category;
+                }
+            });
+        }
+
+        function attachAddButtonListeners() {
+            document.querySelectorAll('.add-item-btn').forEach(button => {
+                button.removeEventListener('click', handleAddButtonClick); 
+                button.addEventListener('click', handleAddButtonClick);
+            });
+        }
+
+        function toggleAddItemButtons(enableAll = true) {
+            document.querySelectorAll('.add-item-btn').forEach(button => {
+                const itemId = button.dataset.itemId;
+                const item = allMenuData.find(i => i.id === itemId);
+
+                if (enableAll || !isSelectingHalfPizza) { 
+                    button.removeAttribute('disabled');
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else { 
+                    if (isFirstHalfPromotional) {
+                        if (item && item.category.toLowerCase() === 'promocionais') {
+                            button.removeAttribute('disabled');
+                            button.classList.remove('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            button.setAttribute('disabled', 'true');
+                            button.classList.add('opacity-50', 'cursor-not-allowed');
+                        }
+                    } else { 
+                        if (item && item.category.toLowerCase() === 'promocionais') {
+                            button.setAttribute('disabled', 'true');
+                            button.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            button.removeAttribute('disabled'); 
+                            button.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                }
+            });
+        }
+
+        function toggleCategoryButtons(enableAll = true) {
+            document.querySelectorAll('.category-btn').forEach(button => {
+                const category = button.dataset.category.toLowerCase();
+                if (enableAll || !isSelectingHalfPizza) { 
+                    button.removeAttribute('disabled');
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else { 
+                    if (isFirstHalfPromotional) {
+                        if (category === 'promocionais') {
+                            button.removeAttribute('disabled');
+                            button.classList.remove('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            button.setAttribute('disabled', 'true');
+                            button.classList.add('opacity-50', 'cursor-not-allowed');
+                        }
+                    } else { 
+                        if (category === 'promocionais') {
+                            button.setAttribute('disabled', 'true');
+                            button.classList.add('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            button.removeAttribute('disabled'); 
+                            button.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                }
+            });
+        }
+
+        function handleAddButtonClick(e) {
+            const clickedButton = e.target; 
+            const itemId = clickedButton.dataset.itemId;
+            const item = allMenuData.find(i => i.id === itemId);
+
+            if (!item) {
+                console.error('DEBUG: Item não encontrado:', itemId);
+                return;
+            }
+
+            const itemImageUrl = item.isPizza ? item.imageUrl : null;
+            
+            if (item.isCustomizable) {
+                burgerBuilderModal.dataset.basePrice = item.basePrice;
+                openBurgerBuilderModal(item);
+                return;
+            }
+
+            if (isSelectingSecondHalf) {
+                if (!item.isPizza) {
+                    showMessageModal('Por favor, escolha uma pizza para a segunda metade.');
+                    return;
+                }
+
+                if (isFirstHalfPromotional && item.category.toLowerCase() !== 'promocionais') {
+                    showMessageModal('Para pizzas promocionais, a segunda metade deve ser também de uma pizza promocional.', () => {
+                        document.getElementById('promocionais-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        setActiveCategoryButton('promocionais');
+                    });
+                    return;
+                } else if (!isFirstHalfPromotional && item.category.toLowerCase() === 'promocionais') {
+                    showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
+                    return;
+                }
+
+                const pendingHalfIndex = order.findIndex(orderItem => orderItem.id === 'pending-half-pizza');
+                if (pendingHalfIndex > -1) {
+                    order.splice(pendingHalfIndex, 1);
+                }
+
+                const cleanFirstName = firstHalfPizza.name;
+                const combinedName = `Meia ${cleanFirstName} & Meia ${item.name}`;
+                
+                const priceFirstHalfFullSize = firstHalfPizza.original_full_price; 
+                const priceSecondHalfFullSize = item[firstHalfPizza.priceKeyForSlices]; 
+
+                const combinedPrice = ((priceFirstHalfFullSize || 0) / 2) + ((priceSecondHalfFullSize || 0) / 2);
+                const combinedDescription = `${firstHalfPizza.description.replace('Primeira metade: ', '')} e ${item.description}`;
+
+                addToOrder({
+                    type: 'split',
+                    name: combinedName,
+                    price: combinedPrice,
+                    description: combinedDescription,
+                    category: 'pizzas', 
+                    selected_slices: firstHalfPizza.selected_slices
+                }, clickedButton, itemImageUrl); 
+
+                firstHalfPizza = null;
+                isSelectingSecondHalf = false;
+                isSelectingHalfPizza = false; 
+                isFirstHalfPromotional = false; 
+                toggleAddItemButtons(true); 
+                toggleCategoryButtons(true); 
+                showTemporaryFeedback('Pizza meio a meia adicionada ao pedido!', 'bg-green-500'); 
+                
+            } else if (item.isCustomizable) {
+                burgerBuilderModal.dataset.basePrice = item.basePrice;
+                openBurgerBuilderModal(item);
+                return;
+            } else if (item.isPizza) {
+                currentPizzaData = { ...item }; 
+                modalPizzaName.textContent = item.name;
+                modalPizzaDescription.textContent = item.description;
+
+                pizzaSizeOptions.innerHTML = '';
+                
+                const availableSizes = sizes.filter(size => currentPizzaData[size.priceKey] > 0);
+
+                if (availableSizes.length === 1) {
+                    pizzaSizeOptions.classList.remove('sm:grid-cols-3');
+                    pizzaSizeOptions.classList.add('sm:grid-cols-1', 'max-w-xs', 'mx-auto'); 
+                } else {
+                    pizzaSizeOptions.classList.add('sm:grid-cols-3');
+                    pizzaSizeOptions.classList.remove('sm:grid-cols-1', 'max-w-xs', 'mx-auto');
+                }
+
+                availableSizes.forEach(size => {
+                    const sizePrice = currentPizzaData[size.priceKey];
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'pizza-size-option';
+                    optionDiv.innerHTML = `
+                        <span class="font-bold text-base text-gray-800">${size.label}</span>
+                        <span class="font-bold text-red-600 text-lg">R$ ${sizePrice.toFixed(2).replace('.', ',')}</span>
+                        <div class="flex flex-col gap-2 mt-2 w-full">
+                            <button class="add-full-size-pizza-btn px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition"
+                                    data-slices="${size.slices}" data-price-key="${size.priceKey}">
+                                Adicionar Inteira
+                            </button>
+                            <button class="add-half-size-pizza-btn px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition"
+                                    data-slices="${size.slices}" data-price-key="${size.priceKey}">
+                                Adicionar Meia Pizza
+                            </button>
+                        </div>
+                    `;
+                    pizzaSizeOptions.appendChild(optionDiv);
+
+                    optionDiv.querySelector('.add-full-size-pizza-btn').addEventListener('click', function() {
+                        const selectedSlices = parseInt(this.dataset.slices);
+                        const selectedPriceKey = this.dataset.priceKey;
+                        addToOrder({
+                            type: 'full',
+                            name: currentPizzaData.name,
+                            price: currentPizzaData[selectedPriceKey], 
+                            description: currentPizzaData.description,
+                            category: currentPizzaData.category,
+                            selected_slices: selectedSlices
+                        }, this, currentPizzaData.imageUrl); 
+                        pizzaOptionModal.style.display = 'none';
+                        updatePromotionButtonVisibility(); 
+                    });
+
+                    optionDiv.querySelector('.add-half-size-pizza-btn').addEventListener('click', function() {
+                        const selectedSlices = parseInt(this.dataset.slices);
+                        const selectedPriceKey = this.dataset.priceKey;
+                        firstHalfPizza = {
+                            name: currentPizzaData.name,
+                            price: currentPizzaData[selectedPriceKey] / 2, 
+                            description: currentPizzaData.description,
+                            original_full_price: currentPizzaData[selectedPriceKey], 
+                            selected_slices: selectedSlices,
+                            priceKeyForSlices: selectedPriceKey, 
+                            category: currentPizzaData.category 
+                        };
+                        isSelectingSecondHalf = true;
+                        isSelectingHalfPizza = true; 
+                        isFirstHalfPromotional = (currentPizzaData.category.toLowerCase() === 'promocionais'); 
+                        pizzaOptionModal.style.display = 'none';
+                        updatePromotionButtonVisibility(); 
+
+                        toggleAddItemButtons(false); 
+                        toggleCategoryButtons(false); 
+                        
+                        addToOrderOnly(
+                            {
+                                type: 'half_pending',
+                                name: `½ ${currentPizzaData.name}`,
+                                price: currentPizzaData[selectedPriceKey] / 2,
+                                description: `Primeira metade: ${currentPizzaData.description}`,
+                                id: 'pending-half-pizza',
+                                category: currentPizzaData.category,
+                                selected_slices: selectedSlices
+                            }, this, currentPizzaData.imageUrl 
+                        );
+                        setTimeout(() => {
+                            showMessageModal('Agora, escolha a segunda metade da sua pizza.'); 
+                        }, 100);
+                    });
+                });
+
+                pizzaOptionModal.style.display = 'flex';
+                promotionButton.style.display = 'none'; 
+            } else { 
+                addToOrder({
+                    type: 'full',
+                    name: item.name,
+                    price: item.basePrice, 
+                    description: item.description,
+                    category: item.category
+                }, clickedButton, itemImageUrl); 
+            }
+        }
+        
+        function addToOrder(item, clickedButton = null, itemImageUrl = null) {
+            order.push(item);
+            updateOrderDisplay();
+            updateCartCount();
+
+            if (clickedButton) {
+                animateItemToCart(clickedButton, itemImageUrl); 
+            }
+            
+            showTemporaryFeedback('✔️ Adicionado ao pedido!', 'bg-green-500');
+        }
+
+        function addToOrderOnly(item, clickedButton = null, itemImageUrl = null) {
+            order.push(item);
+            updateOrderDisplay();
+            updateCartCount();
+            if (clickedButton) {
+                animateItemToCart(clickedButton, itemImageUrl); 
+            }
+        }
+
+        function animateItemToCart(originElement, imageUrl = null) {
+            const cartButtonRect = cartButton.getBoundingClientRect();
+            const originRect = originElement.getBoundingClientRect();
+
+            const flyingEl = document.createElement('div');
+            flyingEl.classList.add('fly-to-cart-animation');
+            
+            if (imageUrl) {
+                flyingEl.innerHTML = `<img src="${imageUrl}" alt="item" class="w-full h-full object-cover rounded-full">`;
+            } else {
+                flyingEl.innerHTML = '<i class="fas fa-plus"></i>'; 
+            }
+
+            flyingEl.style.setProperty('--start-x', `${originRect.left + originRect.width / 2 - 15}px`);
+            flyingEl.style.setProperty('--start-y', `${originRect.top + originRect.height / 2 - 15}px`);
+            flyingEl.style.setProperty('--end-x', `${cartButtonRect.left + cartButtonRect.width / 2 - 15}px`);
+            flyingEl.style.setProperty('--end-y', `${cartButtonRect.top + cartButtonRect.height / 2 - 15}px`);
+
+            document.body.appendChild(flyingEl);
+
+            flyingEl.addEventListener('animationend', () => {
+                flyingEl.remove();
+            });
+        }
+
+        function showTemporaryFeedback(message, bgColorClass) {
+            const feedback = document.createElement('div');
+            feedback.textContent = message;
+            feedback.className = `fixed right-4 ${bgColorClass} text-white px-4 py-2 rounded-lg shadow-lg slide-in`;
+            feedback.style.zIndex = '100';
+
+            const cartButtonRect = cartButton.getBoundingClientRect(); 
+            feedback.style.bottom = `${window.innerHeight - cartButtonRect.top + 10}px`; 
+            document.body.appendChild(feedback);
+            
+            setTimeout(() => {
+                feedback.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => feedback.remove(), 300);
+            }, 2000);
+        }
+        
+        function updateOrderDisplay() {
+            const orderItemsContainer = document.getElementById('orderItems');
+            let subtotal = 0;
+
+            const nonDiscountItems = order.filter(item => item.type !== 'discount');
+            nonDiscountItems.forEach((item) => {
+                subtotal += item.price;
+            });
+            
+            // Lógica de desconto percentual
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = subtotal * (discountPromotion.promoPrice / 100);
+            }
+
+            if (order.length === 0) {
+                emptyOrderMessage.classList.remove('hidden');
+                orderItemsContainer.innerHTML = '';
+                orderItemsContainer.appendChild(emptyOrderMessage);
+                subtotalEl.textContent = 'R$ 0,00';
+                selectedPaymentMethod = null;
+                discountSection.classList.add('hidden');
+            } else {
+                emptyOrderMessage.classList.add('hidden');
+                
+                let itemsHTML = '';
+                order.forEach((item, index) => {
+                    let itemName = item.name;
+                    let itemDescription = '';
+                    let priceHtml = `<span class="font-bold mr-4">R$ ${item.price.toFixed(2).replace('.', ',')}</span>`;
+
+                    if (item.type === 'promotion') {
+                        itemName = `<i class="fas fa-tags text-red-600 mr-2"></i> ${item.name}`;
+                    } else if (item.selected_slices) {
+                        let sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
+                        itemName = `<b>${sizeLabel}</b>: ${item.name}`;
+                    } else if (item.type === 'custom_burger') {
+                        itemName = `<i class="fas fa-hamburger text-red-600 mr-2"></i> ${item.name}`;
+                        const ingredientsListHtml = `
+                            <ul class="text-xs text-gray-500 mt-1 pl-4 list-disc list-inside">
+                                ${item.ingredients.map(ing => `<li>${ing.name}</li>`).join('')}
+                            </ul>
+                        `;
+                        itemDescription = ingredientsListHtml;
+                    } else if (item.type === 'discount') {
+                        return; // Não exibe o item de desconto na lista de itens
+                    }
+                    
+                    const isLastItem = (index === order.length - 1);
+                    const borderClass = isLastItem && !selectedPaymentMethod && !selectedAddress.bairro && !selectedAddress.clientName ? '' : 'border-b border-gray-100';
+
+                    itemsHTML += `
+                        <div class="flex justify-between items-center py-3 ${borderClass}">
+                            <div class="flex-1">
+                                <p class="font-medium">${itemName}</p>
+                                ${item.type === 'custom_burger' ? itemDescription : `<p class="text-sm text-gray-500">${itemDescription}</p>`}
+                            </div>
+                            <div class="flex items-center">
+                                ${priceHtml}
+                                <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                orderItemsContainer.innerHTML = itemsHTML;
+                subtotalEl.textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',')
+                
+                if (discountPromotion && subtotal > 0) {
+                    discountSection.classList.remove('hidden');
+                    discountPercentageDisplay.textContent = `${discountPromotion.promoPrice}%`;
+                    discountValueDisplay.textContent = `- R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
+                } else {
+                    discountSection.classList.add('hidden');
+                }
+            }
+            
+            if (selectedAddress.bairro) {
+                deliveryFeeDisplay.textContent = 'R$ ' + selectedAddress.deliveryFee.toFixed(2).replace('.', ',');
+                deliveryFeeDisplay.classList.remove('hidden');
+                informAddressBtn.classList.add('hidden');
+                editDeliveryAddressBtn.classList.remove('hidden');
+            } else {
+                deliveryFeeDisplay.textContent = '';
+                deliveryFeeDisplay.classList.add('hidden');
+                informAddressBtn.classList.remove('hidden');
+                editDeliveryAddressBtn.classList.add('hidden');
+            }
+            
+            const total = subtotal - finalDiscountAmount + selectedAddress.deliveryFee;
+            totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+
+            if (selectedPaymentMethod) {
+                let paymentMethodText = '';
+                let trocoInfo = '';
+
+                if (typeof selectedPaymentMethod === 'object' && selectedPaymentMethod.method === 'Dinheiro') {
+                    paymentMethodText = selectedPaymentMethod.method;
+                    trocoInfo = `
+                        <p class="text-sm text-gray-500 mt-1">Troco para: R$ ${selectedPaymentMethod.trocoPara.toFixed(2).replace('.', ',')}</p>
+                        <p class="text-sm text-gray-500">Troco: <span class="font-bold text-green-600">R$ ${selectedPaymentMethod.trocoTotal.toFixed(2).replace('.', ',')}</span></p>
+                    `;
+                } else {
+                    paymentMethodText = selectedPaymentMethod;
+                }
+
+                orderItemsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="flex justify-between items-start py-3">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-600">Forma de Pagamento:</p>
+                            ${trocoInfo}
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-bold text-red-600">${paymentMethodText}</span>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            updateDrinkSuggestionButtons();
+            updateAddressDisplay();
+        }
+        
+        function removeItem(index) {
+            const removedItem = order[index];
+            order.splice(index, 1);
+            updateOrderDisplay();
+            updateCartCount();
+
+            if (removedItem && removedItem.id === 'pending-half-pizza') {
+                firstHalfPizza = null;
+                isSelectingSecondHalf = false;
+                isSelectingHalfPizza = false; 
+                isFirstHalfPromotional = false; 
+                toggleAddItemButtons(true); 
+                toggleCategoryButtons(true); 
+                showMessageModal('Seleção de meia pizza cancelada.', 'bg-red-600'); 
+            }
+        }
+        
+        function clearOrder() {
+            order = [];
+            updateOrderDisplay();
+            updateCartCount();
+            firstHalfPizza = null;
+            isSelectingSecondHalf = false;
+            isSelectingHalfPizza = false; 
+            isFirstHalfPromotional = false; 
+            toggleAddItemButtons(true); 
+            toggleCategoryButtons(true);
+            updateCheckoutButtonText();
+        }
+        
+        function updateCartCount() {
+            if (order.length > 0) {
+                cartCount.textContent = order.length;
+                cartCount.classList.remove('hidden');
+            } else {
+                cartCount.classList.add('hidden');
+            }
+        }
+        
+        function proceedToWhatsappCheckout() {
+            const whatsappNumber = contactInfo.whatsapp ? `55${contactInfo.whatsapp.replace(/\D/g, '')}` : '5587996070638'; 
+            let message = 'Olá! Gostaria de fazer o seguinte pedido:\n\n';
+            let subtotal = 0;
+
+            const nonDiscountItems = order.filter(item => item.type !== 'discount');
+            nonDiscountItems.forEach(item => {
+                let itemName = item.name;
+                let itemDescription = '';
+
+                if (item.type === 'promotion') {
+                    itemName = item.name.replace('<i class="fas fa-tags text-red-600 mr-2"></i> ', ''); 
+                } else if (item.selected_slices) {
+                    let sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
+                    message += `- ${sizeLabel}: ${item.name} R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                    return; // Retorna para evitar a duplicação do nome do item
+                } else if (item.type === 'custom_burger') {
+                    itemName = `Hambúrguer Personalizado`;
+                    itemDescription = item.ingredients.map(ing => `  - ${ing.name}`).join('\n');
+                    message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n${itemDescription}\n`;
+                }
+
+                if (item.type !== 'custom_burger') {
+                    message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                }
+                subtotal += item.price;
+            });
+            
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = subtotal * (discountPromotion.promoPrice / 100);
+                message += `\nDesconto (${discountPromotion.promoPrice}%): -R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
+            }
+
+            const total = subtotal - finalDiscountAmount + selectedAddress.deliveryFee;
+
+            message += `\nSubtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+            message += `\nTaxa de entrega (${selectedAddress.bairro || 'Não informado'}): R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`;
+            message += `\nTotal: R$ ${total.toFixed(2).replace('.', ',')}`;
+            
+            if (selectedAddress.clientName && selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
+                message += `\n\nDados da Entrega:\n`;
+                message += `Nome: ${selectedAddress.clientName}\n`;
+                message += `Bairro: ${selectedAddress.bairro}\n`;
+                message += `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}\n`;
+                if (selectedAddress.referencia) {
+                    message += `Ponto de Referência: ${selectedAddress.referencia}\n`;
+                }
+            } else {
+                message += `\n\nDados da Entrega: Não informado. Por favor, confirme o endereço e nome com o cliente.`
+            }
+
+
+            if (selectedPaymentMethod) {
+                if (typeof selectedPaymentMethod === 'object' && selectedPaymentMethod.method === 'Dinheiro') {
+                    message += `\nForma de Pagamento: ${selectedPaymentMethod.method}`;
+                    message += `\nTroco para: R$ ${selectedPaymentMethod.trocoPara.toFixed(2).replace('.', ',')}`;
+                    message += `\nTroco: R$ ${selectedPaymentMethod.trocoTotal.toFixed(2).replace('.', ',')}`;
+                } else if (selectedPaymentMethod === 'Pix' && contactInfo.chavepix) {
+                     message += `\nForma de Pagamento: Pix`;
+                     message += `\nChave Pix: ${contactInfo.chavepix}`;
+                } else {
+                    message += `\nForma de Pagamento: ${selectedPaymentMethod}`;
+                }
+            }
+
+            message += '\n\nObrigado!';
+
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+            
+            clearOrder();
+        }
+
+        function handleCheckoutFlow() {
+            if (order.length === 0) {
+                showMessageModal('O seu pedido está vazio. Adicione itens antes de finalizar.');
+                return;
+            }
+            
+            if (isSelectingHalfPizza) { 
+                showMessageModal('Por favor, escolha a segunda metade da sua pizza antes de finalizar o pedido.');
+                return;
+            }
+
+            if (!selectedAddress.clientName || !selectedAddress.bairro || (!selectedAddress.numero && !noNumberCheckbox.checked)) {
+                isCheckoutInitiated = true;
+                showAddressInputModal();
+                return;
+            }
+
+            const hasDrinks = order.some(item => item.category === 'bebidas');
+            if (!hasDrinks) {
+                displayDrinkSuggestionModal(); 
+                return; 
+            }
+
+            if (!selectedPaymentMethod) {
+                isCheckoutInitiated = true; 
+                openPaymentMethodModal(true); 
+            } else {
+                proceedToWhatsappCheckout();
+            }
+        }
+
+        function updateCheckoutButtonText() {
+            checkoutButton.textContent = 'Finalizar Pedido';
+            checkoutButton.onclick = handleCheckoutFlow;
+        }
+
+        function backToMenu() {
+            closeOrderSidebar();
+            document.getElementById('menu').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function backToOrderSidebarFromDrinkSuggestion() {
+            drinkSuggestionModal.style.display = 'none'; 
+            orderSidebar.scrollTop = orderSidebar.scrollHeight;
+        }
+
+        function displayPromotionsPopup() {
+            promotionsListEl.innerHTML = '';
+            const activePromotions = allPromotionsData.filter(promo => promo.active && promo.promoPrice !== null);
+
+            if (activePromotions.length > 0) {
+                activePromotions.forEach(promo => {
+                    const promoDiv = document.createElement('div');
+                    promoDiv.className = 'promotion-item';
+                    
+                    const promoImageUrl = promo.name === 'Desconto no Pedido' ? null : allMenuData.find(item => item.id === promo.itemId)?.imageUrl;
+                    const isDiscountPromo = promo.name === 'Desconto no Pedido';
+
+                    promoDiv.innerHTML = `
+                        <h4>${promo.name}</h4>
+                        <p>${promo.description}</p>
+                        <span class="price">${isDiscountPromo ? `${promo.promoPrice}% de desconto` : `R$ ${promo.promoPrice.toFixed(2).replace('.', ',')}`}</span>
+                        ${isDiscountPromo
+                            ? `<button disabled class="px-3 py-1 bg-green-600 text-white rounded-full text-sm mt-2 opacity-50 cursor-not-allowed">Já Aplicado</button>`
+                            : `<button class="add-promo-to-order-btn px-3 py-1 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition mt-2" data-promo-id="${promo.id}" data-image-url="${promoImageUrl || ''}">Adicionar ao Pedido</button>`
+                        }
+                    `;
+                    promotionsListEl.appendChild(promoDiv);
+                });
+                document.querySelectorAll('.add-promo-to-order-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const promoId = this.dataset.promoId;
+                        const promoImageUrl = this.dataset.imageUrl || null; 
+                        addPromotionToOrder(promoId, this, promoImageUrl); 
+                    });
+                });
+                promotionPopup.style.display = 'flex';
+            } else {
+                promotionPopup.style.display = 'none';
+            }
+        }
+
+        function addPromotionToOrder(promoId, clickedButton = null, itemImageUrl = null) { 
+            const promotion = allPromotionsData.find(p => p.id === promoId);
+            if (promotion) {
+                order.push({
+                    type: 'promotion',
+                    name: promotion.name,
+                    price: promotion.promoPrice,
+                    description: promotion.description,
+                    itemId: promotion.itemId
+                });
+                updateOrderDisplay();
+                updateCartCount();
+                promotionPopup.style.display = 'none';
+                if (clickedButton) {
+                    animateItemToCart(clickedButton, itemImageUrl); 
+                }
+                showTemporaryFeedback(`Promoção "${promotion.name}" adicionada ao pedido!`, 'bg-green-500'); 
+            } else {
+                showMessageModal('Erro ao adicionar promoção. Por favor, tente novamente.');
+            }
+        }
+
+        function updatePromotionButtonVisibility() {
+            const activePromotionsWithPrice = allPromotionsData.filter(promo => promo.active && promo.promoPrice !== null);
+            const isAnyModalOpen = document.querySelector('.modal[style*="display: flex"]');
+            if (activePromotionsWithPrice.length > 0 && !orderSidebar.classList.contains('translate-x-0') && !isAnyModalOpen) {
+                promotionButton.style.display = 'flex';
+            } else {
+                promotionButton.style.display = 'none';
+            }
+        }
+
+        closePromotionPopupBtn.addEventListener('click', function() {
+            promotionPopup.style.display = 'none';
+            updatePromotionButtonVisibility();
+        });
+        closePromotionPopupBtnBottom.addEventListener('click', function() {
+            promotionPopup.style.display = 'none';
+            updatePromotionButtonVisibility();
+        });
+        window.addEventListener('click', function(event) {
+            if (event.target == promotionPopup) {
+                promotionPopup.style.display = 'none';
+                updatePromotionButtonVisibility();
+            }
+        });
+
+        promotionButton.addEventListener('click', function() {
+            displayPromotionsPopup();
+        });
+
+        function displayDrinkSuggestionModal() {
+            suggestedDrinksList.innerHTML = ''; 
+            const availableDrinks = allMenuData.filter(item => item.category === 'bebidas' && item.available);
+
+            if (availableDrinks.length > 0) {
+                const drinksToSuggest = availableDrinks; 
+                drinksToSuggest.forEach(drink => {
+                    const drinkItemHtml = `
+                        <div class="suggested-drink-item">
+                            <span class="drink-name">${drink.name}</span>
+                            <span class="drink-price">R$ ${drink.basePrice.toFixed(2).replace('.', ',')}</span>
+                            <button class="add-suggested-drink-btn" data-item-id="${drink.id}">Adicionar</button>
+                        </div>
+                    `;
+                    suggestedDrinksList.insertAdjacentHTML('beforeend', drinkItemHtml);
+                });
+
+                document.querySelectorAll('.add-suggested-drink-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const itemId = this.dataset.itemId;
+                        const item = allMenuData.find(i => i.id === itemId);
+                        if (item) {
+                            addToOrder({
+                                type: 'full',
+                                name: item.name,
+                                price: item.basePrice,
+                                description: item.description,
+                                category: item.category
+                            }, this, null); 
+                            updateDrinkSuggestionButtons(); 
+                        }
+                    });
+                });
+            } else {
+                suggestedDrinksList.innerHTML = '<p class="text-gray-500">Nenhuma bebida disponível para sugestão no momento.</p>';
+            }
+            drinkSuggestionModal.style.display = 'flex'; 
+            updatePromotionButtonVisibility();
+            updateDrinkSuggestionButtons(); 
+        }
+
+        closeDrinkSuggestionModalBtn.addEventListener('click', function() {
+            drinkSuggestionModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        });
+
+        proceedWithoutDrinksBtn.addEventListener('click', function() {
+            drinkSuggestionModal.style.display = 'none';
+            const hasDrinks = order.some(item => item.category === 'bebidas');
+
+            if (!selectedPaymentMethod) {
+                isCheckoutInitiated = true;
+                openPaymentMethodModal(true); 
+            } else {
+                proceedToWhatsappCheckout();
+            }
+        });
+
+        function updateDrinkSuggestionButtons() {
+            const hasDrinks = order.some(item => item.category === 'bebidas');
+            if (hasDrinks) {
+                proceedWithoutDrinksBtn.textContent = 'Finalizar com Bebidas';
+                proceedWithoutDrinksBtn.classList.remove('btn-order');
+                proceedWithoutDrinksBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'transition', 'duration-300');
+            } else {
+                proceedWithoutDrinksBtn.textContent = 'Finalizar sem Bebidas';
+                proceedWithoutDrinksBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                proceedWithoutDrinksBtn.classList.add('btn-order'); 
+            }
+        }
+
+
+        closeConfirmNoDrinkModalBtn.addEventListener('click', function() {
+            confirmNoDrinkModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+            drinkSuggestionModal.style.display = 'flex'; 
+        });
+
+        confirmNoDrinkYesBtn.addEventListener('click', function() {
+            confirmNoDrinkModal.style.display = 'none';
+            if (selectedPaymentMethod) {
+                proceedToWhatsappCheckout();
+            } else {
+                isCheckoutInitiated = true; 
+                openPaymentMethodModal(true); 
+            }
+        });
+
+        confirmNoDrinkNoBtn.addEventListener('click', function() { 
+            confirmNoDrinkModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+            drinkSuggestionModal.style.display = 'flex'; 
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == confirmNoDrinkModal) {
+                confirmNoDrinkModal.style.display = 'none';
+                updatePromotionButtonVisibility();
+                drinkSuggestionModal.style.display = 'flex'; 
+            }
+        });
+
+        function openPaymentMethodModal(fromCheckout = false) { 
+            isCheckoutInitiated = fromCheckout; 
+            paymentMethodModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
+            
+            const totalOrder = calculateOrderTotal();
+            paymentModalTotal.textContent = `R$ ${totalOrder.toFixed(2).replace('.', ',')}`;
+
+            trocoInputContainer.classList.add('hidden');
+            trocoParaInput.value = ''; 
+            trocoTotalDisplay.textContent = 'R$ 0,00'; 
+            pixKeyContainer.classList.add('hidden');
+            const pixCanvas = document.getElementById('qrcode');
+            if (pixCanvas) {
+                pixCanvas.innerHTML = '';
+            }
+
+
+            if (selectedPaymentMethod) {
+                const methodValue = typeof selectedPaymentMethod === 'object' ? selectedPaymentMethod.method : selectedPaymentMethod;
+                const radio = document.querySelector(`input[name="paymentMethod"][value="${methodValue}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected')); 
+                    radio.closest('.payment-option').classList.add('selected');
+
+                    if (methodValue === 'Dinheiro') {
+                        trocoInputContainer.classList.remove('hidden');
+                        if (typeof selectedPaymentMethod === 'object' && selectedPaymentMethod.trocoPara) {
+                            trocoParaInput.value = selectedPaymentMethod.trocoPara;
+                            const trocoCalculado = selectedPaymentMethod.trocoPara - totalOrder;
+                            trocoTotalDisplay.textContent = `R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`;
+                        }
+                    }
+                    if (methodValue === 'Pix' && contactInfo.chavepix) {
+                        const totalAmount = calculateOrderTotal()
+                        const payload = gerarPayload(contactInfo.chavepix, totalAmount, contactInfo.cnpj, contactInfo.cidade, "pedido" + Date.now());
+                        pixKeyDisplay.textContent = payload;
+                        pixKeyContainer.classList.remove('hidden');
+                        
+                        // Gera o QR Code
+                        new QRCode(document.getElementById('qrcode'), {
+                            text: payload,
+                            width: 128,
+                            height: 128,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+
+                    } else {
+                        pixKeyContainer.classList.add('hidden');
+                    }
+                }
+            } else {
+                document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+                    radio.checked = false;
+                    radio.closest('.payment-option').classList.remove('selected');
+                });
+            }
+        }
+
+        function closePaymentMethodModal() {
+            paymentMethodModal.style.display = 'none';
+            const pixCanvas = document.getElementById('qrcode');
+            if (pixCanvas) {
+                pixCanvas.innerHTML = '';
+            }
+        }
+
+        closePaymentMethodModalBtn.addEventListener('click', closePaymentMethodModal);
+
+        paymentOptionsContainer.addEventListener('click', (event) => {
+            const label = event.target.closest('.payment-option');
+            if (label) {
+                const pixCanvas = document.getElementById('qrcode');
+                if (pixCanvas) {
+                    pixCanvas.innerHTML = '';
+                }
+
+                document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+                label.classList.add('selected');
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+
+                if (radio && radio.value === 'Dinheiro') {
+                    trocoInputContainer.classList.remove('hidden');
+                    const totalOrder = calculateOrderTotal();
+                    const trocoParaValue = parseFloat(trocoParaInput.value) || 0;
+                    if (trocoParaValue >= totalOrder) {
+                        const trocoCalculado = trocoParaValue - totalOrder;
+                        trocoTotalDisplay.textContent = `R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`;
+                    } else {
+                        trocoTotalDisplay.textContent = 'R$ 0,00';
+                    }
+                } else {
+                    trocoInputContainer.classList.add('hidden');
+                    trocoParaInput.value = ''; 
+                    trocoTotalDisplay.textContent = 'R$ 0,00'; 
+                }
+
+                if (radio && radio.value === 'Pix' && contactInfo.chavepix) {
+                    const totalAmount = calculateOrderTotal()
+                    const payload = gerarPayload(contactInfo.chavepix, totalAmount, contactInfo.cnpj, contactInfo.cidade, "pedido" + Date.now());
+                    pixKeyDisplay.textContent = payload;
+                    pixKeyContainer.classList.remove('hidden');
+
+                     // Gera o QR Code
+                     const qrcodeContainer = document.getElementById('pix-key-container');
+                     const newCanvas = document.createElement('div'); // Mudado para div para o qrcode.js
+                     newCanvas.id = 'pix-qrcode-canvas';
+                     newCanvas.className = 'mt-4 mx-auto block';
+                     qrcodeContainer.parentElement.appendChild(newCanvas);
+                     new QRCode(newCanvas, {
+                         text: payload,
+                         width: 128,
+                         height: 128,
+                         colorDark : "#000000",
+                         colorLight : "#ffffff",
+                         correctLevel : QRCode.CorrectLevel.H
+                     });
+
+                } else {
+                    pixKeyContainer.classList.add('hidden');
+                }
+            }
+        });
+
+        trocoParaInput.addEventListener('input', () => {
+            const totalOrder = calculateOrderTotal();
+            const trocoParaValue = parseFloat(trocoParaInput.value);
+
+            if (!isNaN(trocoParaValue) && trocoParaValue >= totalOrder) {
+                const trocoCalculado = trocoParaValue - totalOrder;
+                trocoTotalDisplay.textContent = `R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`;
+                trocoTotalDisplay.classList.remove('text-red-600'); 
+                trocoTotalDisplay.classList.add('text-green-600'); 
+            } else {
+                trocoTotalDisplay.textContent = `R$ 0,00`;
+                trocoTotalDisplay.classList.remove('text-green-600');
+                trocoTotalDisplay.classList.add('text-red-600'); 
+            }
+        });
+        
+        function copyPixKey() {
+            const pixKeyText = pixKeyDisplay.textContent;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(pixKeyText)
+                .then(() => {
+                    const feedbackEl = document.getElementById('copy-feedback');
+                    feedbackEl.classList.remove('hidden');
+                    setTimeout(() => {
+                        feedbackEl.classList.add('hidden');
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    fallbackCopyTextToClipboard(pixKeyText);
+                });
+            } else {
+                fallbackCopyTextToClipboard(pixKeyText);
+            }
+        }
+        
+        function fallbackCopyTextToClipboard(text) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const feedbackEl = document.getElementById('copy-feedback');
+            feedbackEl.classList.remove('hidden');
+            setTimeout(() => {
+                feedbackEl.classList.add('hidden');
+            }, 2000);
+        }
+
+        copyPixBtn.addEventListener('click', copyPixKey);
+
+
+        function calculateOrderTotal() {
+            let currentSubtotal = 0;
+            order.forEach(item => {
+                if (item.type !== 'discount') {
+                    currentSubtotal += item.price;
+                }
+            });
+
+            // Aplica o desconto se existir e for válido
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = currentSubtotal * (discountPromotion.promoPrice / 100);
+            }
+
+            return currentSubtotal - finalDiscountAmount + selectedAddress.deliveryFee;
+        }
+
+        confirmPaymentMethodBtn.addEventListener('click', () => {
+            const selectedRadio = document.querySelector('input[name="paymentMethod"]:checked');
+            if (selectedRadio) {
+                if (selectedRadio.value === 'Dinheiro') {
+                    const totalOrder = calculateOrderTotal();
+                    const trocoParaValue = parseFloat(trocoParaInput.value);
+
+                    if (isNaN(trocoParaValue) || trocoParaValue < totalOrder) {
+                        showMessageModal(`O valor para troco (R$ ${totalOrder.toFixed(2).replace('.', ',')}) não pode ser menor que o total do pedido (R$ ${totalOrder.toFixed(2).replace('.', ',')}).`);
+                        return; 
+                    }
+                    const trocoCalculado = trocoParaValue - totalOrder;
+                    selectedPaymentMethod = {
+                        method: 'Dinheiro',
+                        trocoPara: trocoParaValue,
+                        trocoTotal: trocoCalculado
+                    };
+                } else {
+                    selectedPaymentMethod = selectedRadio.value;
+                }
+                
+                closePaymentMethodModal();
+                
+                if (isCheckoutInitiated) {
+                    proceedToWhatsappCheckout(); 
+                }
+                isCheckoutInitiated = false; 
+                updateOrderDisplay(); 
+            } else {
+                showMessageModal('Por favor, selecione uma forma de pagamento.');
+            }
+        });
+
+        let isScrollingFromClick = false; 
+        let currentActiveCategoryByScroll = ''; 
+
+        function getStickyHeaderHeight() {
+            const stickyHeader = document.querySelector('.category-bar-mobile-sticky');
+            return stickyHeader.offsetHeight;
+        }
+
+        function setActiveCategoryButton(category) {
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            categoryBtns.forEach(btn => {
+                btn.classList.remove('bg-red-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-800');
+            });
+
+            const targetBtn = document.querySelector(`.category-btn[data-category="${category}"]`);
+            if (targetBtn) {
+                targetBtn.classList.remove('bg-gray-200', 'text-gray-800'); 
+                targetBtn.classList.add('bg-red-600', 'text-white'); 
+                targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        let categoryObserver; 
+
+        function setupCategoryObserver() {
+            if (categoryObserver) {
+                categoryObserver.disconnect();
+            }
+
+            const categorySections = document.querySelectorAll('.pizza-category-section'); 
+
+            categoryObserver = new IntersectionObserver((entries) => {
+                if (isScrollingFromClick) {
+                    return;
+                }
+
+                const stickyHeaderHeight = getStickyHeaderHeight();
+                let newActiveCategory = null;
+                let minDistance = Infinity; 
+
+                categorySections.forEach(section => {
+                    const rect = section.getBoundingClientRect();
+                    const category = section.id.replace('-section', '');
+
+                    if (rect.top <= stickyHeaderHeight + 5 && rect.bottom > stickyHeaderHeight) {
+                        const distance = Math.abs(rect.top - stickyHeaderHeight);
+                        if (distance < minDistance) {
+                            minActiveCategory = category;
+                        }
+                    }
+                });
+
+                if (!newActiveCategory && categorySections.length > 0) {
+                    if (window.scrollY <= stickyHeaderHeight + 20) {
+                        newActiveCategory = categorySections[0].id.replace('-section', ''); 
+                    } else {
+                        for (let i = 0; i < categorySections.length; i++) {
+                            const section = categorySections[i];
+                            const rect = section.getBoundingClientRect();
+                            if (rect.bottom > 0 && rect.top < window.innerHeight) {
+                                newActiveCategory = section.id.replace('-section', '');
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (isSelectingHalfPizza) { 
+                    if (isFirstHalfPromotional) { 
+                        if (newActiveCategory && newActiveCategory.toLowerCase() !== 'promocionais') {
+                            setActiveCategoryButton('promocionais');
+                            currentActiveCategoryByScroll = 'promocionais'; 
+                            isScrollingFromClick = true; 
+                            document.getElementById('promocionais-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setTimeout(() => { isScrollingFromClick = false; }, 700); 
+                            showMessageModal('Para pizzas promocionais, a segunda metade deve ser também de uma pizza promocional.');
+                            return; 
+                        }
+                    } else { 
+                        if (newActiveCategory && newActiveCategory.toLowerCase() === 'promocionais') {
+                            const originalCategory = firstHalfPizza.category.toLowerCase();
+                            setActiveCategoryButton(originalCategory);
+                            currentActiveCategoryByScroll = originalCategory; 
+                            isScrollingFromClick = true; 
+                            document.getElementById(`${originalCategory}-section`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            setTimeout(() => { isScrollingFromClick = false; }, 700); 
+                            showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
+                            return; 
+                        }
+                    }
+                }
+
+                if (newActiveCategory && newActiveCategory !== currentActiveCategoryByScroll) {
+                    setActiveCategoryButton(newActiveCategory);
+                    currentActiveCategoryByScroll = newActiveCategory;
+                }
+            }, {
+                root: null,
+                rootMargin: `-${getStickyHeaderHeight()}px 0px 0px 0px`, 
+                threshold: 0 
+            });
+
+            categorySections.forEach(section => {
+                categoryObserver.observe(section);
+            });
+        }
+
+        function showAddressInputModal() {
+            addressInputModal.style.display = 'flex';
+            updatePromotionButtonVisibility();
+
+            // Pré-preenche os campos se já houver dados
+            clientNameInput.value = selectedAddress.clientName || '';
+            if (selectedAddress.bairro) {
+                neighborhoodSelect.value = selectedAddress.bairro;
+            } else {
+                neighborhoodSelect.value = "";
+            }
+            streetInput.value = selectedAddress.rua || '';
+            numberInput.value = selectedAddress.numero || '';
+            noNumberCheckbox.checked = selectedAddress.numero === 'S/N';
+            numberInput.disabled = noNumberCheckbox.checked;
+            referencePointInput.value = selectedAddress.referencia || '';
+        }
+
+        function hideAddressInputModal() {
+            addressInputModal.style.display = 'none';
+            updatePromotionButtonVisibility();
+        }
+
+        closeAddressModalBtn.addEventListener('click', hideAddressInputModal);
+        window.addEventListener('click', function(event) {
+            if (event.target == addressInputModal) {
+                hideAddressInputModal();
+            }
+        });
+        
+        noNumberCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                numberInput.value = '';
+                numberInput.disabled = true;
+                numberInput.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                numberInput.disabled = false;
+                numberInput.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        function populateNeighborhoodDropdown(feesData) {
+            neighborhoodSelect.innerHTML = '<option value="">Selecione um bairro</option>';
+            if (!feesData || feesData.length === 0) {
+                return;
+            }
+            feesData.forEach(fee => {
+                if (typeof fee.neighborhood === 'string' && fee.neighborhood.trim() !== '') {
+                    const option = document.createElement('option');
+                    option.value = fee.neighborhood;
+                    option.textContent = `${fee.neighborhood} (R$ ${fee.deliveryFee.toFixed(2).replace('.', ',')})`;
+                    neighborhoodSelect.appendChild(option);
+                }
+            });
+        }
+
+        confirmAddressBtn.addEventListener('click', function() {
+            const clientName = clientNameInput.value.trim();
+            const bairro = neighborhoodSelect.value;
+            const rua = streetInput.value.trim();
+            let numero = numberInput.value.trim();
+            const referencia = referencePointInput.value.trim();
+            const isNoNumber = noNumberCheckbox.checked;
+
+            if (!clientName || !bairro || !rua) {
+                showMessageModal('Por favor, preencha o nome do cliente, o bairro e a rua para continuar.');
+                return;
+            }
+            
+            if (!isNoNumber && !numero) {
+                showMessageModal('Por favor, preencha o número ou marque a opção "Sem Número".');
+                return;
+            }
+
+            if (isNoNumber) {
+                numero = 'S/N';
+            }
+
+            const selectedFee = deliveryFeesData.find(fee => fee.neighborhood === bairro);
+            if (!selectedFee) {
+                showMessageModal('Bairro selecionado inválido. Por favor, selecione um bairro da lista.');
+                return;
+            }
+
+            selectedAddress = {
+                clientName: clientName,
+                bairro: bairro,
+                rua: rua,
+                numero: numero,
+                referencia: referencia,
+                deliveryFee: selectedFee.deliveryFee
+            };
+
+            hideAddressInputModal();
+            updateOrderDisplay();
+            showAddressSummary();
+            
+            if (isCheckoutInitiated) {
+                handleCheckoutFlow();
+            }
+        });
+
+        function showAddressSummary() {
+            if (selectedAddress.bairro) {
+                addressSummarySection.classList.remove('hidden');
+                clientNameDisplay.textContent = `Nome do Cliente: ${selectedAddress.clientName || 'Não informado'}`;
+                addressDisplay.textContent = `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
+                neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
+                referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
+            } else {
+                hideAddressSummary();
+            }
+        }
+
+        function hideAddressSummary() {
+            addressSummarySection.classList.add('hidden');
+            clientNameDisplay.textContent = '';
+            addressDisplay.textContent = '';
+            neighborhoodDisplay.textContent = '';
+            referenceDisplay.textContent = '';
+        }
+
+        editAddressBtn.addEventListener('click', function() {
+            showAddressInputModal();
+        });
+
+        function updateAddressDisplay() {
+            if (selectedAddress.bairro && selectedAddress.rua) {
+                addressSummarySection.classList.remove('hidden');
+                clientNameDisplay.textContent = `Nome do Cliente: ${selectedAddress.clientName || 'Não informado'}`;
+                addressDisplay.textContent = `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
+                neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
+                referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
+            } else {
+                addressSummarySection.classList.add('hidden');
+            }
+        }
+
+        informAddressBtn.addEventListener('click', function() {
+            showAddressInputModal();
+        });
+
+        editDeliveryAddressBtn.addEventListener('click', function() {
+            showAddressInputModal();
+        });
+
+        function populateContactInfo(contacts) {
+            const phoneEl = document.getElementById('footer-phone');
+            const emailEl = document.getElementById('footer-email');
+            const socialLinksEl = document.getElementById('social-links-container');
+
+            socialLinksEl.innerHTML = '';
+            
+            const contactData = contacts.reduce((acc, current) => {
+                const key = current.data.toLowerCase().replace(/[^a-z0-9]/g, '');
+                acc[key] = current.value;
+                return acc;
+            }, {});
+
+            if (contactData.telefone) {
+                phoneEl.textContent = contactData.telefone;
+            }
+            if (contactData.email) {
+                emailEl.textContent = contactData.email;
+            }
+
+            if (contactData.instagram) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="${contactData.instagram}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-instagram text-xl"></i></a>`);
+            }
+            if (contactData.facebook) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="${contactData.facebook}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-facebook text-xl"></i></a>`);
+            }
+            if (contactData.whatsapp) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="https://wa.me/55${contactData.whatsapp.replace(/\D/g, '')}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-whatsapp text-xl"></i></a>`);
+            }
+            
+            return contactData;
+        }
+
+        // Função do seu código
+        function gerarPayload(chave, valor, nome, cidade, txid) {
+            function formatValue(id, value) {
+                const cleanedValue = String(value);
+                return id + String(cleanedValue.length).padStart(2, '0') + cleanedValue;
+            }
+
+            const gui = formatValue("00", "BR.GOV.BCB.PIX");
+            const key = formatValue("01", chave);
+            const info = gui + key;
+
+            const merchantAccountInfo = formatValue("26", info);
+            const txidField = formatValue("05", txid);
+            const additionalDataField = formatValue("62", txidField);
+            
+            // Formatando o valor para ter 2 casas decimais e ponto
+            const formattedValor = parseFloat(valor).toFixed(2);
+
+            const payloadSemCRC =
+                formatValue("00", "01") +
+                merchantAccountInfo +
+                formatValue("52", "0000") +
+                formatValue("53", "986") +
+                formatValue("54", formattedValor) +
+                formatValue("58", "BR") +
+                formatValue("59", nome) +
+                formatValue("60", cidade) +
+                additionalDataField +
+                "6304";
+            
+            return payloadSemCRC + crc16(payloadSemCRC);
+        }
+
+        function crc16(str) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < str.length; i++) {
+                crc ^= str.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    if (crc & 0x8000) {
+                        crc = (crc << 1) ^ 0x1021;
+                    } else {
+                        crc <<= 1;
+                    }
+                    crc &= 0xFFFF;
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function generatePixCopiaEColaPayload(amount, pixKey, merchantName, merchantCity) {
+            if (!pixKey || !amount || isNaN(amount) || amount <= 0) {
+                console.error("DEBUG: Chave Pix, valor ou informações de contato estão faltando.");
+                return "Erro: Chave Pix inválida ou valor ausente.";
+            }
+
+            const txid = "pedido" + Date.now();
+            return gerarPayload(pixKey, amount, merchantName, merchantCity, txid);
+        }
+        
+        async function loadMenuAndRender() {
+            try {
+                // Fetch de todos os dados em paralelo
+                const response = await fetch('/api/menu'); 
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('DEBUG: loadMenuAndRender: Erro HTTP ao buscar dados da API:', response.status, errorText);
+                    throw new Error(`Erro ao buscar dados da API: ${response.statusText || errorText}`);
+                }
+                const data = await response.json(); 
+                
+                // Parse dos dados
+                allMenuData = parseCsvData(data.cardapio, 'cardapio');
+                allPromotionsData = parseCsvData(data.promocoes, 'promocoes');
+                deliveryFeesData = parseCsvData(data.deliveryFees, 'deliveryFees');
+                
+                const rawBurgerIngredients = parseCsvData(data.ingredientesHamburguer, 'ingredientesHamburguer');
+                allBurgerIngredients = rawBurgerIngredients.reduce((acc, current) => {
+                    if (!acc[current.category]) {
+                        acc[current.category] = [];
+                    }
+                    acc[current.category].push(current);
+                    return acc;
+                }, {});
+
+                const parsedContactInfo = parseCsvData(data.contact, 'contact');
+                contactInfo = parsedContactInfo.reduce((acc, curr) => {
+                    if (curr.data && curr.value) {
+                        acc[curr.data.toLowerCase().replace(/[^a-z0-9]/g, '')] = curr.value;
+                    }
+                    return acc;
+                }, {});
+                
+                // Encontrar e armazenar a promoção de desconto se ela existir e estiver ativa
+                discountPromotion = allPromotionsData.find(promo => promo.name === 'Desconto no Pedido' && promo.active);
+                if (discountPromotion) {
+                    console.log(`DEBUG: Promoção de desconto de ${discountPromotion.promoPrice}% encontrada e ativa.`);
+                }
+
+                let orderedUniqueCategories = [];
+                const seenCategories = new Set();
+                allMenuData.forEach(item => {
+                    if (!seenCategories.has(item.category)) {
+                        seenCategories.add(item.category);
+                        orderedUniqueCategories.push(item.category);
+                    }
+                });
+                
+                createCategoryButtons(orderedUniqueCategories); 
+                populateMenu(allMenuData, orderedUniqueCategories); 
+                populateNeighborhoodDropdown(deliveryFeesData); 
+                populateContactInfo(parsedContactInfo); // Chama a nova função para popular os contatos
+                setupCategoryObserver(); 
+                updatePromotionButtonVisibility(); 
+                updateCartCount(); 
+                updateOrderDisplay(); 
+                updateCheckoutButtonText(); 
+                showAddressSummary(); 
+                
+                toggleAddItemButtons(true);
+                toggleCategoryButtons(true);
+                
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('scroll'));
+                }, 100);
+
+            } catch (error) {
+                console.error('DEBUG: loadMenuAndRender: Erro fatal ao carregar o cardápio:', error);
+                showMessageModal('Não foi possível carregar o cardápio no momento. Por favor, tente novamente mais tarde.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('DEBUG: Service Worker registado com sucesso. Scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('DEBUG: Falha no registo do Service Worker:', error);
+                        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                            console.warn('DEBUG: Erro de rede/CORS no Service Worker. Isso pode ser esperado para recursos de terceiros não-cacheáveis.');
+                        }
+                    });
+            }
+            loadMenuAndRender();
+        });
+        
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                loadMenuAndRender();
+            }
+        });
+
+        function isPwaInstalled() {
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                return true;
+            }
+            if (navigator.standalone) {
+                return true;
+            }
+            return false;
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            if (!isPwaInstalled()) {
+                installPromptModal.style.display = 'flex';
+            }
+        });
+
+        installAppButton.addEventListener('click', () => {
+            installPromptModal.style.display = 'none';
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('DEBUG: Usuário aceitou a instalação do PWA');
+                        showMessageModal('Sâmia Cardápio está sendo instalado, logo ele aparecerá na sua tela de app.');
+                    } else {
+                        console.log('DEBUG: Usuário recusou a instalação do PWA');
+                        showMessageModal('Você pode instalar o Sâmia Cardápio a qualquer momento pelo menu do navegador.');
+                    }
+                    deferredPrompt = null; 
+                });
+            }
+        });
+
+        closeInstallPromptModalBtn.addEventListener('click', () => {
+            installPromptModal.style.display = 'none';
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installPromptModal.style.display = 'none';
+            console.log('DEBUG: PWA Sâmia Cardápio foi instalado!');
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (!isPwaInstalled() && deferredPrompt) {
+                    installPromptModal.style.display = 'flex';
+                }
+            }, 3000); 
+        });
+
+    </script>
+</body>
+</html>
