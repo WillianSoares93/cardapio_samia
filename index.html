@@ -344,6 +344,17 @@
         .suggested-drink-item button:hover {
             background-color: #16a34a; /* green-600 */
         }
+        
+        /* Estilos para o botão de confirmar endereço com gradiente verde */
+        .btn-confirm-green {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            transition: all 0.3s ease;
+        }
+        .btn-confirm-green:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+        }
 
         /* CSS para a animação do item voando para o carrinho */
         .fly-to-cart-animation {
@@ -432,16 +443,6 @@
         .payment-option .text-content p {
             font-size: 0.875rem;
             color: #6b7280; /* gray-500 */
-        }
-
-        /* Estilos para o botão dinâmico de checkout no modal de sugestão de bebidas */
-        .dynamic-checkout-button.green-gradient {
-            background: linear-gradient(135deg, #22c55e, #10b981); /* green-500 to green-600 */
-        }
-        .dynamic-checkout-button.green-gradient:hover {
-            background: linear-gradient(135deg, #10b981, #059669); /* darker green on hover */
-            transform: scale(1.02);
-            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
         }
 
         /* Estilos para o modal de endereço */
@@ -560,10 +561,8 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="header-bg text-white py-16 px-4 text-center">
         <div class="max-w-4xl mx-auto">
-            <!-- Logotipo da Sâmia -->
             <img src="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" alt="Logotipo Sâmia" class="h-64 mx-auto mb-4 object-contain">
             <p class="text-2xl mb-8">Pizzaria Artesanal</p>
             <div class="flex justify-center space-x-4">
@@ -574,34 +573,27 @@
         </div>
     </header>
 
-    <!-- Menu Section -->
     <section id="menu" class="py-8 px-4 max-w-6xl mx-auto">
         <div class="text-center mb-8">
             <h2 class="text-4xl font-bold text-gray-800 mb-4">Nosso Cardápio- teste</h2>
             <p class="text-gray-600 text-lg mx-auto">Escolha sua pizza favorita ou uma bebida refrescante!</p>
         </div>
 
-        <!-- Mensagem "Arrasta para o lado" para mobile -->
         <div class="text-gray-500 text-sm text-center mb-4 lg:hidden">
             <i class="fas fa-hand-point-right mr-1"></i> Arraste para o lado para ver outras opções
         </div>
 
-        <!-- Sticky Category Buttons Container -->
         <div class="category-bar-mobile-sticky lg:static lg:p-0">
-            <!-- Os botões de categoria serão gerados dinamicamente aqui pelo JS -->
             <div id="category-buttons-container" class="flex space-x-2 mb-6 overflow-x-auto pb-2 
                         lg:flex-row lg:space-x-2 lg:mb-6 lg:overflow-visible lg:pb-0">
             </div>
         </div>
         
-        <!-- Lista de Itens do Cardápio -->
         <div id="pizza-list">
-            <!-- As seções de categoria e seus itens serão geradas dinamicamente aqui pelo JS -->
             <div id="dynamic-pizza-sections"></div>
         </div>
     </section>
 
-    <!-- Order Summary Sidebar -->
     <div id="orderSidebar" class="fixed top-0 right-0 h-full w-full bg-white shadow-xl z-50 transform translate-x-full transition-transform duration-300 overflow-y-auto">
         <div class="p-6">
             <div class="flex justify-between items-center mb-6">
@@ -612,7 +604,6 @@
             </div>
             
             <div id="orderItems" class="mb-6">
-                <!-- Itens do pedido serão adicionados dinamicamente -->
                 <p class="text-gray-500 text-center py-8" id="emptyOrderMessage">Seu pedido está vazio</p>
             </div>
             
@@ -621,7 +612,12 @@
                     <span class="text-gray-600">Subtotal:</span>
                     <span id="subtotal" class="font-bold">R$ 0,00</span>
                 </div>
-                <!-- Seção de taxa de entrega dinâmica -->
+
+                <div id="discount-section" class="flex justify-between items-center mb-2 hidden text-red-600">
+                    <span class="text-gray-600">Desconto: <span id="discount-percentage-display"></span></span>
+                    <span id="discount-value-display" class="font-bold">- R$ 0,00</span>
+                </div>
+                
                 <div id="deliveryFeeSection" class="flex justify-between mb-2">
                     <span class="text-gray-600">Taxa de entrega:</span>
                     <div id="deliveryFeeContainer" class="flex items-center">
@@ -641,52 +637,45 @@
                 </div>
             </div>
 
-            <!-- Seção de Resumo do Endereço -->
             <div id="address-summary-section" class="border border-gray-200 rounded-lg p-4 mb-6 bg-gray-50 hidden">
-                <h4 class="font-bold text-gray-800 mb-2">Endereço de Entrega:</h4>
+                <h4 class="font-bold text-gray-800 mb-2">Detalhes da Entrega:</h4>
+                <p id="client-name-display" class="text-gray-700 text-sm"></p>
                 <p id="address-display" class="text-gray-700 text-sm"></p>
                 <p id="neighborhood-display" class="text-gray-600 text-sm"></p>
                 <p id="reference-display" class="text-gray-600 text-sm italic"></p>
                 <button id="editAddressBtn" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition">
-                    Editar Endereço
+                    Editar Detalhes
                 </button>
             </div>
 
-            <!-- Botão "Adicionar mais" -->
             <button onclick="backToMenu()" class="btn-add-more w-full py-3 text-white font-bold rounded-full mb-4">
                 Adicionar mais
             </button>
 
-            <!-- Botão de Finalizar Pedido (texto mudará dinamicamente) -->
             <button id="checkoutButton" onclick="handleCheckoutFlow()" class="btn-order w-full py-3 text-white font-bold rounded-full mb-4">
                 Finalizar Pedido
             </button>
             
-            <!-- O botão "Limpar Pedido" foi removido conforme sua solicitação -->
-        </div>
+            </div>
     </div>
 
-    <!-- Modal de Seleção de Pizza (Inteira/Meia) -->
     <div id="pizza-option-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" id="close-pizza-option-modal">&times;</span>
             <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-pizza-name"></h3>
             <p class="text-gray-600 mb-6" id="modal-pizza-description"></p>
             <div id="pizza-size-options" class="grid grid-cols-1 sm:grid-cols-3 gap-2 justify-items-center">
-                <!-- Opções de bairro serão carregadas via JS -->
-            </div>
+                </div>
         </div>
     </div>
     
-    <!-- NOVO: Modal de Montagem de Hambúrguer -->
     <div id="burger-builder-modal" class="modal">
         <div class="modal-content burger-builder-modal">
             <span class="close-button" id="close-burger-builder-modal">&times;</span>
             <h3 class="text-xl font-bold text-gray-800 mb-4">Monte Seu Hambúrguer</h3>
             
             <div id="burger-ingredients-container" class="mb-4">
-                <!-- Seções de ingredientes serão carregadas aqui -->
-            </div>
+                </div>
             
             <div class="flex justify-between items-center bg-gray-100 p-4 rounded-lg mt-4">
                 <span class="text-lg font-bold">Total:</span>
@@ -699,7 +688,6 @@
         </div>
     </div>
 
-    <!-- Modal de Mensagem (para feedback do usuário) -->
     <div id="message-modal" class="message-modal">
         <div class="modal-content">
             <span class="close-button" id="close-message-modal">&times;</span>
@@ -708,28 +696,24 @@
         </div>
     </div>
 
-    <!-- Novo Modal de Promoção Flutuante -->
     <div id="promotion-popup" class="promotion-popup">
         <div class="modal-content">
             <span class="close-button" id="close-promotion-popup">&times;</span>
             <h3>Promoções Especiais!</h3>
             <p>Confira as nossas ofertas exclusivas e não perca tempo!</p>
             <div id="promotions-list">
-                <!-- Promoções serão carregadas aqui -->
-            </div>
+                </div>
             <button id="close-promotion-popup-btn" class="px-6 py-3 mt-6 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition w-full">
                 Fechar Promoções
             </button>
         </div>
     </div>
 
-    <!-- Novo Botão Flutuante de Promoção -->
     <button id="promotion-button" class="hidden">
         <i class="fas fa-tags text-xl"></i>
         <span>Promoções!</span>
     </button>
 
-    <!-- Floating Order Button -->
     <div class="fixed bottom-6 right-6 z-40">
         <button onclick="toggleOrderSidebar()" class="bg-red-600 hover:bg-red-700 text-white rounded-full p-5 shadow-lg relative transition duration-300 transform hover:scale-110" id="cart-button">
             <i class="fas fa-shopping-cart text-2xl"></i>
@@ -737,26 +721,22 @@
         </button>
     </div>
 
-    <!-- Modal de Sugestão de Bebidas -->
     <div id="drink-suggestion-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" id="close-drink-suggestion-modal">&times;</span>
             <h3 class="text-xl font-bold text-gray-800 mb-4">Que tal adicionar uma bebida?</h3>
             <p class="text-gray-600 mb-6">Seu pedido não contém bebidas. Gostaria de adicionar alguma?</p>
-            <!-- Botões "Voltar ao Pedido" e "Finalizar sem Bebidas" / "Finalizar com Bebidas" -->
             <button onclick="backToOrderSidebarFromDrinkSuggestion()" class="px-4 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition w-full mb-3 whitespace-nowrap text-sm">
                 Voltar ao Pedido
             </button>
-            <button id="proceed-without-drinks" class="dynamic-checkout-button btn-order w-full py-3 text-white font-bold rounded-full mb-6 whitespace-nowrap text-sm">
+            <button id="proceed-without-drinks" class="btn-order w-full py-3 text-white font-bold rounded-full mb-6 whitespace-nowrap text-sm">
                 Finalizar sem Bebidas
             </button>
             <div id="suggested-drinks-list" class="flex flex-col gap-3 mb-6">
-                <!-- Sugestões de bebidas serão inseridas aqui via JS -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- NOVO: Modal de Confirmação para Pedido sem Bebida (Mantido, mas não mais usado pelo 'Finalizar sem Bebidas') -->
     <div id="confirm-no-drink-modal" class="message-modal">
         <div class="modal-content">
             <span class="close-button" id="close-confirm-no-drink-modal">&times;</span>
@@ -768,7 +748,6 @@
         </div>
     </div>
 
-    <!-- NOVO: Modal de Sugestão de Instalação do PWA -->
     <div id="install-prompt-modal" class="message-modal">
         <div class="modal-content">
             <span class="close-button" id="close-install-prompt-modal">&times;</span>
@@ -780,12 +759,10 @@
         </div>
     </div>
 
-    <!-- NOVO: Modal de Seleção de Forma de Pagamento -->
     <div id="payment-method-modal" class="modal">
         <div class="modal-content">
             <span class="close-button" id="close-payment-method-modal">&times;</span>
             <h3 class="text-xl font-bold text-gray-800 mb-2">Escolha a Forma de Pagamento</h3>
-            <!-- NOVO: Exibição do total do pedido -->
             <p class="text-gray-600 text-lg mb-4">Total Pedido: <span id="payment-modal-total" class="font-bold text-red-600">R$ 0,00</span></p>
 
             <div id="payment-options-container" class="flex flex-col gap-3 mb-6">
@@ -794,28 +771,31 @@
                     <i class="fas fa-money-bill-wave icon"></i>
                     <div class="text-content">
                         <h4>Dinheiro</h4>
-                        <p></p> <!-- Descrição removida -->
-                    </div>
+                        <p></p> </div>
                 </label>
                 <label class="payment-option" data-method="Cartão de Crédito/Débito">
                     <input type="radio" name="paymentMethod" value="Cartão de Crédito/Débito" class="form-radio">
                     <i class="fas fa-credit-card icon"></i>
                     <div class="text-content">
                         <h4>Cartão de Crédito/Débito</h4>
-                        <p></p> <!-- Descrição removida -->
-                    </div>
+                        <p></p> </div>
                 </label>
                 <label class="payment-option" data-method="Pix">
                     <input type="radio" name="paymentMethod" value="Pix" class="form-radio">
                     <i class="fas fa-qrcode icon"></i>
-                    <div class="text-content">
-                        <h4>Pix</h4>
-                        <p></p> <!-- Descrição removida -->
+                    <div class="text-content flex flex-col items-start w-full">
+                        <h4 class="flex-grow">Pix</h4>
+                        <div id="pix-key-container" class="hidden mt-2 p-2 bg-gray-100 rounded-md text-sm w-full flex items-center justify-between">
+                            <span id="pix-key-display" class="font-mono text-gray-700 text-sm truncate"></span>
+                            <button id="copy-pix-btn" class="ml-2 text-gray-500 hover:text-gray-700" title="Copiar Chave Pix">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <span id="copy-feedback" class="text-green-600 text-xs ml-2 hidden">Copiado!</span>
+                        </div>
                     </div>
                 </label>
             </div>
 
-            <!-- Novo campo para troco -->
             <div id="troco-input-container" class="hidden mt-4 mb-6 p-4 border border-gray-300 rounded-lg bg-gray-50">
                 <label for="trocoPara" class="block text-gray-700 text-sm font-bold mb-2">
                     Troco para (R$):
@@ -832,19 +812,23 @@
         </div>
     </div>
 
-    <!-- NOVO: Modal de Input de Endereço -->
     <div id="address-input-modal" class="address-modal">
-        <div class="address-modal-content">
+        <div class="modal-content">
             <span class="close-button" id="close-address-modal">&times;</span>
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Informe seu Endereço</h3>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Informe seus Dados</h3>
+             <div class="mb-4">
+                <label for="clientNameInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Nome do Cliente:
+                </label>
+                <input type="text" id="clientNameInput" placeholder="Seu nome" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
             <div class="mb-4">
                 <label for="neighborhoodSelect" class="block text-gray-700 text-sm font-bold mb-2">
                     Bairro:
                 </label>
                 <select id="neighborhoodSelect" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="">Selecione um bairro</option>
-                    <!-- Opções de bairro serão carregadas via JS -->
-                </select>
+                    </select>
             </div>
             <div class="mb-4">
                 <label for="streetInput" class="block text-gray-700 text-sm font-bold mb-2">
@@ -853,10 +837,16 @@
                 <input type="text" id="streetInput" placeholder="Nome da Rua" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div class="mb-4">
-                <label for="numberInput" class="block text-gray-700 text-sm font-bold mb-2">
-                    Número:
-                </label>
-                <input type="text" id="numberInput" placeholder="Número" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <div class="flex items-center justify-between mb-2">
+                    <label for="numberInput" class="block text-gray-700 text-sm font-bold">
+                        Número:
+                    </label>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="noNumberCheckbox" class="form-checkbox text-red-600">
+                        <label for="noNumberCheckbox" class="ml-2 text-gray-700 text-sm">Sem Número</label>
+                    </div>
+                </div>
+                <input type="number" inputmode="numeric" id="numberInput" placeholder="Número" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div class="mb-6">
                 <label for="referencePointInput" class="block text-gray-700 text-sm font-bold mb-2">
@@ -864,18 +854,17 @@
                 </label>
                 <input type="text" id="referencePointInput" placeholder="Ex: Próximo à praça" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
-            <button id="confirmAddressBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full w-full transition duration-300">
-                Confirmar Endereço
+            <button id="confirmAddressBtn" class="btn-confirm-green w-full py-2 px-4 rounded-full text-white font-bold transition duration-300">
+                Confirmar Dados
             </button>
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="bg-gray-800 text-white py-8 px-4">
         <div class="max-w-6xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
                 <div>
-                    <h3 class="text-xl font-bold mb-4">Sâmia</h3>
+                    <h3 class="xl font-bold mb-4">Sâmia</h3>
                     <p class="text-gray-400">As melhores pizzas artesanais da cidade, feitas com ingredientes frescos e muito carinho.</p>
                 </div>
                 <div>
@@ -885,13 +874,10 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold mb-4">Contato</h3>
-                    <p class="text-gray-400"><i class="fas fa-phone mr-2"></i> (85) 98765-4321</p>
-                    <p class="text-gray-400"><i class="fas fa-envelope mr-2"></i> contato@suapizzaria.com</p>
-                    <div class="flex justify-center md:justify-start space-x-4 mt-2">
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram text-xl"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook text-xl"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-whatsapp text-xl"></i></a>
-                    </div>
+                    <p class="text-gray-400"><i class="fas fa-phone mr-2"></i> <span id="footer-phone"></span></p>
+                    <p class="text-gray-400"><i class="fas fa-envelope mr-2"></i> <span id="footer-email"></span></p>
+                    <div class="flex justify-center md:justify-start space-x-4 mt-2" id="social-links-container">
+                        </div>
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
@@ -912,8 +898,11 @@
         let deferredPrompt; 
         let selectedPaymentMethod = null; 
         let isCheckoutInitiated = false; 
+        let discountPromotion = null; // Variável global para a promoção de desconto
+        let contactInfo = {};
         
         let selectedAddress = {
+            clientName: null, 
             bairro: null,
             rua: null,
             numero: null,
@@ -922,7 +911,9 @@
         };
 
         const defaultImage = 'https://www.bakelitsul.com.br/Assets/img/sem-produto-detalhe.png';
-        const whatsappNumber = '5587996070638'; 
+        
+        // URL da nova planilha de contatos
+        const CONTACT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJeo2AAETdXC08x9EQlkIG1FiVLEosMng4IvaQYJAdZnIDHJw8CT8J5RAJNtJ5GWHOKHkUsd5V8OSL/pub?gid=2043568216&single=true&output=csv';
 
         // Referências para os elementos DOM
         const orderSidebar = document.getElementById('orderSidebar');
@@ -983,22 +974,40 @@
         const trocoParaInput = document.getElementById('trocoPara'); 
         const trocoTotalDisplay = document.getElementById('trocoTotalDisplay'); 
         const paymentModalTotal = document.getElementById('payment-modal-total'); 
+        const pixKeyContainer = document.getElementById('pix-key-container');
+        const pixKeyDisplay = document.getElementById('pix-key-display');
+        const copyPixBtn = document.getElementById('copy-pix-btn');
+        const copyFeedback = document.getElementById('copy-feedback');
+
 
         // Referências para elementos do modal de endereço
         const addressInputModal = document.getElementById('address-input-modal');
         const closeAddressModalBtn = document.getElementById('close-address-modal');
+        const clientNameInput = document.getElementById('clientNameInput');
         const neighborhoodSelect = document.getElementById('neighborhoodSelect');
         const streetInput = document.getElementById('streetInput');
         const numberInput = document.getElementById('numberInput');
+        const noNumberCheckbox = document.getElementById('noNumberCheckbox'); // NOVO: Checkbox "Sem Número"
         const referencePointInput = document.getElementById('referencePointInput');
         const confirmAddressBtn = document.getElementById('confirmAddressBtn');
         const addressSummarySection = document.getElementById('address-summary-section');
+        const clientNameDisplay = document.getElementById('client-name-display');
         const addressDisplay = document.getElementById('address-display');
         const neighborhoodDisplay = document.getElementById('neighborhood-display');
         const referenceDisplay = document.getElementById('reference-display');
         const editAddressBtn = document.getElementById('editAddressBtn');
         const informAddressBtn = document.getElementById('informAddressBtn');
         const editDeliveryAddressBtn = document.getElementById('editDeliveryAddressBtn');
+        
+        // Referências para os novos elementos de desconto
+        const discountSection = document.getElementById('discount-section');
+        const discountPercentageDisplay = document.getElementById('discount-percentage-display');
+        const discountValueDisplay = document.getElementById('discount-value-display');
+
+        // Referências para elementos do rodapé
+        const footerPhone = document.getElementById('footer-phone');
+        const footerEmail = document.getElementById('footer-email');
+        const socialLinksContainer = document.getElementById('social-links-container');
 
 
         let currentPizzaData = {}; 
@@ -1108,7 +1117,6 @@
         window.addEventListener('click', (event) => {
             if (event.target == burgerBuilderModal) {
                 burgerBuilderModal.style.display = 'none';
-                updatePromotionButtonVisibility();
             }
         });
 
@@ -1117,7 +1125,6 @@
         }
 
         function parseCsvData(csvText, type) {
-            console.log(`DEBUG: parseCsvData para ${type} - CSV Bruto (primeiras 100 chars):`, csvText.substring(0, 100));
             const lines = csvText.split('\n').filter(line => line.trim() !== '');
 
             if (lines.length === 0) {
@@ -1160,7 +1167,6 @@
             const mappedHeaders = headersRaw.map(header => {
                 let cleanedHeader = header.trim();
                 switch (cleanedHeader) {
-                    // Headers para Cardápio
                     case 'ID Item (único)': return 'id';
                     case 'Nome do Item': return 'name';
                     case 'Descrição': return 'description';
@@ -1169,20 +1175,17 @@
                     case 'Preço 4 fatias': return 'price4Slices';
                     case 'Categoria': return 'category';
                     case 'É Pizza? (SIM/NÃO)': return 'isPizza';
-                    case 'É Montável? (SIM/NÃO)': return 'isCustomizable';
+                    case 'É Montável? (SIM/NAO)': return 'isCustomizable';
                     case 'Disponível (SIM/NÃO)': return 'available'; 
                     case 'Imagem': return 'imageUrl'; 
-                    // Headers para Promoções
                     case 'ID Promocao': return 'id';
                     case 'Nome da Promocao': return 'name';
                     case 'Descrição': return 'description';
                     case 'Preco Promocional': return 'promoPrice';
                     case 'ID Item Aplicavel': return 'itemId';
                     case 'Ativo (SIM/NAO)': return 'active';
-                    // Headers para Taxas de Entrega
                     case 'Bairros': return 'neighborhood';
                     case 'Valor Frete': return 'deliveryFee';
-                    // NOVO: Headers para Ingredientes de Hambúrguer
                     case 'ID Intem': return 'id';
                     case 'Ingredientes': return 'name';
                     case 'Preço': return 'price';
@@ -1191,9 +1194,13 @@
                     case 'Limite': return 'limit';
                     case 'É Obrigatório?(SIM/NÃO)': return 'isRequired';
                     case 'Disponível': return 'available'; 
+                    case 'Dados': return 'data';
+                    case 'Valor': return 'value';
                     default: 
-                        console.warn(`DEBUG: Header CSV desconhecido encontrado para ${type}: "${cleanedHeader}"`);
-                        return cleanedHeader.replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, (match) => match.toLowerCase());
+                        if (cleanedHeader.includes('É Montável')) {
+                            return 'isCustomizable';
+                        }
+                        return cleanedHeader.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9]/g, '');
                 }
             });
             
@@ -1207,7 +1214,7 @@
                         let headerKey = mappedHeaders[j];
                         let value = rowValues[j];
                         
-                        if (['neighborhood', 'name', 'category'].includes(headerKey) && (value === undefined || value === null || value.trim() === '')) {
+                        if (['neighborhood', 'name', 'category', 'data'].includes(headerKey) && (value === undefined || value === null || value.trim() === '')) {
                             value = '';
                         }
                         if (['basePrice', 'price6Slices', 'price4Slices', 'promoPrice', 'deliveryFee', 'price'].includes(headerKey)) {
@@ -1218,7 +1225,7 @@
                             item[headerKey] = isNaN(parsedValue) ? Infinity : parsedValue;
                         }
                         else if (['isPizza', 'available', 'active', 'isCustomizable', 'isSingleChoice', 'isRequired'].includes(headerKey)) {
-                            item[headerKey] = value.toUpperCase() === 'SIM';
+                            item[headerKey] = value.toUpperCase() === 'SIM' || value.toUpperCase() === 'SIM\r';
                         } else {
                             item[headerKey] = value;
                         }
@@ -1227,7 +1234,7 @@
                         item.imageUrl = (String(item.imageUrl || '').trim());
                     }
 
-                    if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees' || (type === 'ingredientesHamburguer' && item.available)) {
+                    if ((type === 'cardapio' && item.available) || (type === 'promocoes' && item.active) || type === 'deliveryFees' || (type === 'ingredientesHamburguer' && item.available) || (type === 'contact')) {
                         parsedData.push(item);
                     }
                 } else {
@@ -1292,7 +1299,7 @@
                         
                         // Ouve o evento de clique em toda a div
                         optionDiv.addEventListener('click', (e) => {
-                            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                            if (e.target.tagName !== 'INPUT') { // Não interfere se o clique for diretamente no checkbox/radio
                                 input.checked = !input.checked;
                                 input.dispatchEvent(new Event('change', { bubbles: true }));
                             }
@@ -1318,7 +1325,7 @@
                             }
                             
                             // Lógica de limite para checkboxes
-                            if (!isCurrentSingleChoice && limit !== Infinity) {
+                            if (!isSingleChoice && limit !== Infinity) {
                                 const checkedCount = document.querySelectorAll(`input[name="${e.target.name}"]:checked`).length;
                                 if (checkedCount > limit) {
                                     e.target.checked = false;
@@ -1505,9 +1512,6 @@
                                         ${imageElement}
                                         <div class="p-6">
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
-                                            <div class="flex justify-around items-start text-sm mb-4 w-full overflow-x-auto py-1">
-                                                ${priceDisplayHtml}
-                                            </div>
                                             <p class="text-gray-600 text-sm mb-4">${item.description}</p>
                                             <div class="flex justify-end mt-auto">
                                                 <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
@@ -1588,19 +1592,7 @@
                     } else if (isSelectingHalfPizza && !isFirstHalfPromotional) { 
                         if (targetCategory.toLowerCase() === 'promocionais') {
                             event.preventDefault(); 
-                            showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.', () => {
-                                if (firstHalfPizza && firstHalfPizza.category) {
-                                    const originalCategorySection = document.getElementById(`${firstHalfPizza.category.toLowerCase()}-section`);
-                                    if (originalCategorySection) {
-                                        originalCategorySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        setActiveCategoryButton(firstHalfPizza.category.toLowerCase());
-                                    } else {
-                                        document.getElementById('menu').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }
-                                } else {
-                                    document.getElementById('menu').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                            });
+                            showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
                             return; 
                         }
                     }
@@ -1750,7 +1742,7 @@
                 isFirstHalfPromotional = false; 
                 toggleAddItemButtons(true); 
                 toggleCategoryButtons(true); 
-                showTemporaryFeedback('Pizza meio a meio adicionada ao pedido!', 'bg-green-500'); 
+                showTemporaryFeedback('Pizza meio a meia adicionada ao pedido!', 'bg-green-500'); 
                 
             } else if (item.isPizza) {
                 currentPizzaData = { ...item }; 
@@ -1775,7 +1767,7 @@
                     optionDiv.className = 'pizza-size-option';
                     optionDiv.innerHTML = `
                         <span class="font-bold text-base text-gray-800">${size.label}</span>
-                        <span class="text-red-600 font-bold text-lg">R$ ${sizePrice.toFixed(2).replace('.', ',')}</span>
+                        <span class="font-bold text-red-600 text-lg">R$ ${sizePrice.toFixed(2).replace('.', ',')}</span>
                         <div class="flex flex-col gap-2 mt-2 w-full">
                             <button class="add-full-size-pizza-btn px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition"
                                     data-slices="${size.slices}" data-price-key="${size.priceKey}">
@@ -1921,16 +1913,24 @@
             const orderItemsContainer = document.getElementById('orderItems');
             let subtotal = 0;
 
-            order.forEach((item) => {
+            const nonDiscountItems = order.filter(item => item.type !== 'discount');
+            nonDiscountItems.forEach((item) => {
                 subtotal += item.price;
             });
+            
+            // Lógica de desconto percentual
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = subtotal * (discountPromotion.promoPrice / 100);
+            }
 
             if (order.length === 0) {
                 emptyOrderMessage.classList.remove('hidden');
                 orderItemsContainer.innerHTML = '';
                 orderItemsContainer.appendChild(emptyOrderMessage);
-                document.getElementById('subtotal').textContent = 'R$ 0,00';
+                subtotalEl.textContent = 'R$ 0,00';
                 selectedPaymentMethod = null;
+                discountSection.classList.add('hidden');
             } else {
                 emptyOrderMessage.classList.add('hidden');
                 
@@ -1938,11 +1938,12 @@
                 order.forEach((item, index) => {
                     let itemName = item.name;
                     let itemDescription = '';
+                    let priceHtml = `<span class="font-bold mr-4">R$ ${item.price.toFixed(2).replace('.', ',')}</span>`;
 
                     if (item.type === 'promotion') {
                         itemName = `<i class="fas fa-tags text-red-600 mr-2"></i> ${item.name}`;
                     } else if (item.selected_slices) {
-                        const sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
+                        let sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
                         itemName = `<b>${sizeLabel}</b>: ${item.name}`;
                     } else if (item.type === 'custom_burger') {
                         itemName = `<i class="fas fa-hamburger text-red-600 mr-2"></i> ${item.name}`;
@@ -1952,10 +1953,12 @@
                             </ul>
                         `;
                         itemDescription = ingredientsListHtml;
+                    } else if (item.type === 'discount') {
+                        return; // Não exibe o item de desconto na lista de itens
                     }
                     
                     const isLastItem = (index === order.length - 1);
-                    const borderClass = isLastItem && !selectedPaymentMethod && !selectedAddress.bairro ? '' : 'border-b border-gray-100';
+                    const borderClass = isLastItem && !selectedPaymentMethod && !selectedAddress.bairro && !selectedAddress.clientName ? '' : 'border-b border-gray-100';
 
                     itemsHTML += `
                         <div class="flex justify-between items-center py-3 ${borderClass}">
@@ -1964,7 +1967,7 @@
                                 ${item.type === 'custom_burger' ? itemDescription : `<p class="text-sm text-gray-500">${itemDescription}</p>`}
                             </div>
                             <div class="flex items-center">
-                                <span class="font-bold mr-4">R$ ${item.price.toFixed(2).replace('.', ',')}</span>
+                                ${priceHtml}
                                 <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
@@ -1973,7 +1976,15 @@
                     `;
                 });
                 orderItemsContainer.innerHTML = itemsHTML;
-                subtotalEl.textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
+                subtotalEl.textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',')
+                
+                if (discountPromotion && subtotal > 0) {
+                    discountSection.classList.remove('hidden');
+                    discountPercentageDisplay.textContent = `${discountPromotion.promoPrice}%`;
+                    discountValueDisplay.textContent = `- R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
+                } else {
+                    discountSection.classList.add('hidden');
+                }
             }
             
             if (selectedAddress.bairro) {
@@ -1988,7 +1999,7 @@
                 editDeliveryAddressBtn.classList.add('hidden');
             }
             
-            const total = subtotal + selectedAddress.deliveryFee;
+            const total = subtotal - finalDiscountAmount + selectedAddress.deliveryFee;
             totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
 
             if (selectedPaymentMethod) {
@@ -2062,19 +2073,21 @@
         }
         
         function proceedToWhatsappCheckout() {
-            const whatsappNumber = '5587996070638'; 
+            const whatsappNumber = contactInfo.whatsapp ? `55${contactInfo.whatsapp.replace(/\D/g, '')}` : '5587996070638'; 
             let message = 'Olá! Gostaria de fazer o seguinte pedido:\n\n';
             let subtotal = 0;
 
-            order.forEach(item => {
+            const nonDiscountItems = order.filter(item => item.type !== 'discount');
+            nonDiscountItems.forEach(item => {
                 let itemName = item.name;
                 let itemDescription = '';
 
                 if (item.type === 'promotion') {
                     itemName = item.name.replace('<i class="fas fa-tags text-red-600 mr-2"></i> ', ''); 
                 } else if (item.selected_slices) {
-                    itemName = `${item.selected_slices} FATIAS`.toUpperCase();
-                    itemName = `<b>${sizeLabel}</b>: ${item.name}`;
+                    let sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
+                    message += `- ${sizeLabel}: ${item.name} R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                    return; // Retorna para evitar a duplicação do nome do item
                 } else if (item.type === 'custom_burger') {
                     itemName = `Hambúrguer Personalizado`;
                     itemDescription = item.ingredients.map(ing => `  - ${ing.name}`).join('\n');
@@ -2086,22 +2099,29 @@
                 }
                 subtotal += item.price;
             });
+            
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = subtotal * (discountPromotion.promoPrice / 100);
+                message += `\nDesconto (${discountPromotion.promoPrice}%): -R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
+            }
 
-            const total = subtotal + selectedAddress.deliveryFee;
+            const total = subtotal - finalDiscountAmount + selectedAddress.deliveryFee;
 
             message += `\nSubtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}`;
             message += `\nTaxa de entrega (${selectedAddress.bairro || 'Não informado'}): R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`;
             message += `\nTotal: R$ ${total.toFixed(2).replace('.', ',')}`;
             
-            if (selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
-                message += `\n\nEndereço de Entrega:\n`;
+            if (selectedAddress.clientName && selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
+                message += `\n\nDados da Entrega:\n`;
+                message += `Nome: ${selectedAddress.clientName}\n`;
                 message += `Bairro: ${selectedAddress.bairro}\n`;
                 message += `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}\n`;
                 if (selectedAddress.referencia) {
                     message += `Ponto de Referência: ${selectedAddress.referencia}\n`;
                 }
             } else {
-                message += `\n\nEndereço de Entrega: Não informado. Por favor, confirme o endereço com o cliente.`
+                message += `\n\nDados da Entrega: Não informado. Por favor, confirme o endereço e nome com o cliente.`
             }
 
 
@@ -2110,6 +2130,9 @@
                     message += `\nForma de Pagamento: ${selectedPaymentMethod.method}`;
                     message += `\nTroco para: R$ ${selectedPaymentMethod.trocoPara.toFixed(2).replace('.', ',')}`;
                     message += `\nTroco: R$ ${selectedPaymentMethod.trocoTotal.toFixed(2).replace('.', ',')}`;
+                } else if (selectedPaymentMethod === 'Pix' && contactInfo.chavepix) {
+                     message += `\nForma de Pagamento: Pix`;
+                     message += `\nChave Pix: ${contactInfo.chavepix}`;
                 } else {
                     message += `\nForma de Pagamento: ${selectedPaymentMethod}`;
                 }
@@ -2134,7 +2157,8 @@
                 return;
             }
 
-            if (!selectedAddress.bairro || !selectedAddress.rua || !selectedAddress.numero) {
+            if (!selectedAddress.clientName || !selectedAddress.bairro || (!selectedAddress.numero && !noNumberCheckbox.checked)) {
+                isCheckoutInitiated = true;
                 showAddressInputModal();
                 return;
             }
@@ -2177,17 +2201,17 @@
                     const promoDiv = document.createElement('div');
                     promoDiv.className = 'promotion-item';
                     
-                    const applicableItem = allMenuData.find(item => item.id === promo.itemId);
-                    const promoImageUrl = applicableItem && applicableItem.isPizza ? applicableItem.imageUrl : null;
+                    const promoImageUrl = promo.name === 'Desconto no Pedido' ? null : allMenuData.find(item => item.id === promo.itemId)?.imageUrl;
+                    const isDiscountPromo = promo.name === 'Desconto no Pedido';
 
                     promoDiv.innerHTML = `
                         <h4>${promo.name}</h4>
                         <p>${promo.description}</p>
-                        <span class="price">R$ ${promo.promoPrice.toFixed(2).replace('.', ',')}</span>
-                        <button class="add-promo-to-order-btn px-3 py-1 bg-green-600 text-white rounded-full text-sm hover:bg-green-700 transition mt-2"
-                                data-promo-id="${promo.id}" data-image-url="${promoImageUrl || ''}">
-                            Adicionar ao Pedido
-                        </button>
+                        <span class="price">${isDiscountPromo ? `${promo.promoPrice}% de desconto` : `R$ ${promo.promoPrice.toFixed(2).replace('.', ',')}`}</span>
+                        ${isDiscountPromo
+                            ? `<button disabled class="px-3 py-1 bg-green-600 text-white rounded-full text-sm mt-2 opacity-50 cursor-not-allowed">Já Aplicado</button>`
+                            : `<button class="add-promo-to-order-btn px-3 py-1 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition mt-2" data-promo-id="${promo.id}" data-image-url="${promoImageUrl || ''}">Adicionar ao Pedido</button>`
+                        }
                     `;
                     promotionsListEl.appendChild(promoDiv);
                 });
@@ -2317,12 +2341,12 @@
             const hasDrinks = order.some(item => item.category === 'bebidas');
             if (hasDrinks) {
                 proceedWithoutDrinksBtn.textContent = 'Finalizar com Bebidas';
-                proceedWithoutDrinksBtn.classList.add('green-gradient');
                 proceedWithoutDrinksBtn.classList.remove('btn-order');
+                proceedWithoutDrinksBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'transition', 'duration-300');
             } else {
                 proceedWithoutDrinksBtn.textContent = 'Finalizar sem Bebidas';
+                proceedWithoutDrinksBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 proceedWithoutDrinksBtn.classList.add('btn-order'); 
-                proceedWithoutDrinksBtn.classList.remove('green-gradient');
             }
         }
 
@@ -2368,6 +2392,7 @@
             trocoInputContainer.classList.add('hidden');
             trocoParaInput.value = ''; 
             trocoTotalDisplay.textContent = 'R$ 0,00'; 
+            pixKeyContainer.classList.add('hidden');
 
             if (selectedPaymentMethod) {
                 const methodValue = typeof selectedPaymentMethod === 'object' ? selectedPaymentMethod.method : selectedPaymentMethod;
@@ -2384,6 +2409,12 @@
                             const trocoCalculado = selectedPaymentMethod.trocoPara - totalOrder;
                             trocoTotalDisplay.textContent = `R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`;
                         }
+                    }
+                    if (methodValue === 'Pix' && contactInfo.chavepix) {
+                        pixKeyDisplay.textContent = generatePixCopiaEColaPayload(totalOrder, contactInfo.chavepix, contactInfo.nome, contactInfo.cidade);
+                        pixKeyContainer.classList.remove('hidden');
+                    } else {
+                        pixKeyContainer.classList.add('hidden');
                     }
                 }
             } else {
@@ -2425,6 +2456,14 @@
                     trocoParaInput.value = ''; 
                     trocoTotalDisplay.textContent = 'R$ 0,00'; 
                 }
+
+                if (radio && radio.value === 'Pix' && contactInfo.chavepix) {
+                    const totalAmount = calculateOrderTotal()
+                    pixKeyDisplay.textContent = generatePixCopiaEColaPayload(totalAmount, contactInfo.chavepix, contactInfo.nome, contactInfo.cidade);
+                    pixKeyContainer.classList.remove('hidden');
+                } else {
+                    pixKeyContainer.classList.add('hidden');
+                }
             }
         });
 
@@ -2443,13 +2482,42 @@
                 trocoTotalDisplay.classList.add('text-red-600'); 
             }
         });
+        
+        function copyPixKey() {
+            const pixKeyText = pixKeyDisplay.textContent;
+            // Cria um elemento de texto temporário para copiar o conteúdo
+            const tempInput = document.createElement('textarea');
+            tempInput.value = pixKeyText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            
+            const feedbackEl = document.getElementById('copy-feedback');
+            feedbackEl.classList.remove('hidden');
+            setTimeout(() => {
+                feedbackEl.classList.add('hidden');
+            }, 2000);
+        }
+        
+        copyPixBtn.addEventListener('click', copyPixKey);
+
 
         function calculateOrderTotal() {
             let currentSubtotal = 0;
             order.forEach(item => {
-                currentSubtotal += item.price;
+                if (item.type !== 'discount') {
+                    currentSubtotal += item.price;
+                }
             });
-            return currentSubtotal + selectedAddress.deliveryFee;
+
+            // Aplica o desconto se existir e for válido
+            let finalDiscountAmount = 0;
+            if (discountPromotion) {
+                finalDiscountAmount = currentSubtotal * (discountPromotion.promoPrice / 100);
+            }
+
+            return currentSubtotal - finalDiscountAmount + selectedAddress.deliveryFee;
         }
 
         confirmPaymentMethodBtn.addEventListener('click', () => {
@@ -2533,8 +2601,7 @@
                     if (rect.top <= stickyHeaderHeight + 5 && rect.bottom > stickyHeaderHeight) {
                         const distance = Math.abs(rect.top - stickyHeaderHeight);
                         if (distance < minDistance) {
-                            minDistance = distance;
-                            newActiveCategory = category;
+                            minActiveCategory = category;
                         }
                     }
                 });
@@ -2598,6 +2665,8 @@
             addressInputModal.style.display = 'flex';
             updatePromotionButtonVisibility();
 
+            // Pré-preenche os campos se já houver dados
+            clientNameInput.value = selectedAddress.clientName || '';
             if (selectedAddress.bairro) {
                 neighborhoodSelect.value = selectedAddress.bairro;
             } else {
@@ -2605,6 +2674,8 @@
             }
             streetInput.value = selectedAddress.rua || '';
             numberInput.value = selectedAddress.numero || '';
+            noNumberCheckbox.checked = selectedAddress.numero === 'S/N';
+            numberInput.disabled = noNumberCheckbox.checked;
             referencePointInput.value = selectedAddress.referencia || '';
         }
 
@@ -2617,6 +2688,17 @@
         window.addEventListener('click', function(event) {
             if (event.target == addressInputModal) {
                 hideAddressInputModal();
+            }
+        });
+        
+        noNumberCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                numberInput.value = '';
+                numberInput.disabled = true;
+                numberInput.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                numberInput.disabled = false;
+                numberInput.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
 
@@ -2636,14 +2718,25 @@
         }
 
         confirmAddressBtn.addEventListener('click', function() {
+            const clientName = clientNameInput.value.trim();
             const bairro = neighborhoodSelect.value;
             const rua = streetInput.value.trim();
-            const numero = numberInput.value.trim();
+            let numero = numberInput.value.trim();
             const referencia = referencePointInput.value.trim();
+            const isNoNumber = noNumberCheckbox.checked;
 
-            if (!bairro || !rua || !numero) {
-                showMessageModal('Por favor, preencha o bairro, a rua e o número para continuar.');
+            if (!clientName || !bairro || !rua) {
+                showMessageModal('Por favor, preencha o nome do cliente, o bairro e a rua para continuar.');
                 return;
+            }
+            
+            if (!isNoNumber && !numero) {
+                showMessageModal('Por favor, preencha o número ou marque a opção "Sem Número".');
+                return;
+            }
+
+            if (isNoNumber) {
+                numero = 'S/N';
             }
 
             const selectedFee = deliveryFeesData.find(fee => fee.neighborhood === bairro);
@@ -2653,6 +2746,7 @@
             }
 
             selectedAddress = {
+                clientName: clientName,
                 bairro: bairro,
                 rua: rua,
                 numero: numero,
@@ -2672,7 +2766,8 @@
         function showAddressSummary() {
             if (selectedAddress.bairro) {
                 addressSummarySection.classList.remove('hidden');
-                addressDisplay.textContent = `${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
+                clientNameDisplay.textContent = `Nome do Cliente: ${selectedAddress.clientName || 'Não informado'}`;
+                addressDisplay.textContent = `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
                 neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
                 referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
             } else {
@@ -2682,6 +2777,7 @@
 
         function hideAddressSummary() {
             addressSummarySection.classList.add('hidden');
+            clientNameDisplay.textContent = '';
             addressDisplay.textContent = '';
             neighborhoodDisplay.textContent = '';
             referenceDisplay.textContent = '';
@@ -2692,9 +2788,10 @@
         });
 
         function updateAddressDisplay() {
-            if (selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
+            if (selectedAddress.bairro && selectedAddress.rua) {
                 addressSummarySection.classList.remove('hidden');
-                addressDisplay.textContent = `${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
+                clientNameDisplay.textContent = `Nome do Cliente: ${selectedAddress.clientName || 'Não informado'}`;
+                addressDisplay.textContent = `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}`;
                 neighborhoodDisplay.textContent = `Bairro: ${selectedAddress.bairro}`;
                 referenceDisplay.textContent = selectedAddress.referencia ? `Ponto de Referência: ${selectedAddress.referencia}` : '';
             } else {
@@ -2710,9 +2807,103 @@
             showAddressInputModal();
         });
 
+        function populateContactInfo(contacts) {
+            const phoneEl = document.getElementById('footer-phone');
+            const emailEl = document.getElementById('footer-email');
+            const socialLinksEl = document.getElementById('social-links-container');
+
+            socialLinksEl.innerHTML = '';
+            
+            const contactData = contacts.reduce((acc, current) => {
+                const key = current.data.toLowerCase().replace(/[^a-z0-9]/g, '');
+                acc[key] = current.value;
+                return acc;
+            }, {});
+
+            if (contactData.telefone) {
+                phoneEl.textContent = contactData.telefone;
+            }
+            if (contactData.email) {
+                emailEl.textContent = contactData.email;
+            }
+
+            if (contactData.instagram) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="${contactData.instagram}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-instagram text-xl"></i></a>`);
+            }
+            if (contactData.facebook) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="${contactData.facebook}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-facebook text-xl"></i></a>`);
+            }
+            if (contactData.whatsapp) {
+                socialLinksEl.insertAdjacentHTML('beforeend', `<a href="https://wa.me/55${contactData.whatsapp.replace(/\D/g, '')}" class="text-gray-400 hover:text-white" target="_blank"><i class="fab fa-whatsapp text-xl"></i></a>`);
+            }
+            
+            return contactData;
+        }
+
+        // Função do seu código
+        function gerarPayload(chave, valor, nome, cidade, txid) {
+            function formatValue(id, value) {
+                const cleanedValue = String(value);
+                return id + String(cleanedValue.length).padStart(2, '0') + cleanedValue;
+            }
+
+            const gui = formatValue("00", "BR.GOV.BCB.PIX");
+            const key = formatValue("01", chave);
+            const info = gui + key;
+
+            const merchantAccountInfo = formatValue("26", info);
+            const txidField = formatValue("05", txid);
+            const additionalDataField = formatValue("62", txidField);
+            
+            // Formatando o valor para ter 2 casas decimais e ponto
+            const formattedValor = parseFloat(valor).toFixed(2);
+
+            const payloadSemCRC =
+                formatValue("00", "01") +
+                merchantAccountInfo +
+                formatValue("52", "0000") +
+                formatValue("53", "986") +
+                formatValue("54", formattedValor) +
+                formatValue("58", "BR") +
+                formatValue("59", nome) +
+                formatValue("60", cidade) +
+                additionalDataField +
+                "6304";
+            
+            return payloadSemCRC + crc16(payloadSemCRC);
+        }
+
+        function crc16(str) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < str.length; i++) {
+                crc ^= str.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    if (crc & 0x8000) {
+                        crc = (crc << 1) ^ 0x1021;
+                    } else {
+                        crc <<= 1;
+                    }
+                    crc &= 0xFFFF;
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function generatePixCopiaEColaPayload(amount, pixKey, merchantName, merchantCity) {
+            if (!pixKey || !amount || isNaN(amount) || amount <= 0) {
+                console.error("DEBUG: Chave Pix, valor ou informações de contato estão faltando.");
+                return "Erro: Chave Pix inválida ou valor ausente.";
+            }
+
+            const txid = "pedido" + Date.now();
+            return gerarPayload(pixKey, amount, merchantName, merchantCity, txid);
+        }
+        
         async function loadMenuAndRender() {
             try {
+                // Fetch de todos os dados em paralelo
                 const response = await fetch('/api/menu'); 
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('DEBUG: loadMenuAndRender: Erro HTTP ao buscar dados da API:', response.status, errorText);
@@ -2720,16 +2911,12 @@
                 }
                 const data = await response.json(); 
                 
-                const cardapioCsvText = data.cardapio;
-                const promocoesCsvText = data.promocoes;
-                const deliveryFeesCsvText = data.deliveryFees;
-                const ingredientesHamburguerCsvText = data.ingredientesHamburguer;
-
-                allMenuData = parseCsvData(cardapioCsvText, 'cardapio');
-                allPromotionsData = parseCsvData(promocoesCsvText, 'promocoes');
-                deliveryFeesData = parseCsvData(deliveryFeesCsvText, 'deliveryFees');
+                // Parse dos dados
+                allMenuData = parseCsvData(data.cardapio, 'cardapio');
+                allPromotionsData = parseCsvData(data.promocoes, 'promocoes');
+                deliveryFeesData = parseCsvData(data.deliveryFees, 'deliveryFees');
                 
-                const rawBurgerIngredients = parseCsvData(ingredientesHamburguerCsvText, 'ingredientesHamburguer');
+                const rawBurgerIngredients = parseCsvData(data.ingredientesHamburguer, 'ingredientesHamburguer');
                 allBurgerIngredients = rawBurgerIngredients.reduce((acc, current) => {
                     if (!acc[current.category]) {
                         acc[current.category] = [];
@@ -2737,6 +2924,20 @@
                     acc[current.category].push(current);
                     return acc;
                 }, {});
+
+                const parsedContactInfo = parseCsvData(data.contact, 'contact');
+                contactInfo = parsedContactInfo.reduce((acc, curr) => {
+                    if (curr.data && curr.value) {
+                        acc[curr.data.toLowerCase().replace(/[^a-z0-9]/g, '')] = curr.value;
+                    }
+                    return acc;
+                }, {});
+                
+                // Encontrar e armazenar a promoção de desconto se ela existir e estiver ativa
+                discountPromotion = allPromotionsData.find(promo => promo.name === 'Desconto no Pedido' && promo.active);
+                if (discountPromotion) {
+                    console.log(`DEBUG: Promoção de desconto de ${discountPromotion.promoPrice}% encontrada e ativa.`);
+                }
 
                 let orderedUniqueCategories = [];
                 const seenCategories = new Set();
@@ -2750,6 +2951,7 @@
                 createCategoryButtons(orderedUniqueCategories); 
                 populateMenu(allMenuData, orderedUniqueCategories); 
                 populateNeighborhoodDropdown(deliveryFeesData); 
+                populateContactInfo(parsedContactInfo); // Chama a nova função para popular os contatos
                 setupCategoryObserver(); 
                 updatePromotionButtonVisibility(); 
                 updateCartCount(); 
