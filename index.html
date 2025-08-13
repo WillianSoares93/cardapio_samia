@@ -6,7 +6,7 @@
     <title>Sâmia - Cardápio Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" https://raw.githubusercontent.com/WillianSoares93/cardapio_samia/refs/heads/main/logo.png?token=GHSAT0AAAAAADH4U7OGUWZPNUK43O7H5MC42E3RFRA" type="image/png">
+    <link rel="icon" href="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
     <style>
@@ -39,7 +39,7 @@
             box-shadow: 0 3px 10px rgba(251, 191, 36, 0.4);
         }
         .header-bg {
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://raw.githubusercontent.com/WillianSoares93/cardapio_samia/refs/heads/main/imagem_fundo_cabe%C3%A7alho.jpg?token=GHSAT0AAAAAADH4U7OGQF5LDXGZTTFGGH4G2E3ROBQ');
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://invexo.com.br/blog/wp-content/uploads/2022/12/pizza-pizzaria-gavea-rio-de-janeiro.jpg');
             background-size: cover;
             background-position: center;
         }
@@ -204,7 +204,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
             cursor: pointer;
             z-index: 1500;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
             animation: pulse 1.5s infinite;
             align-items: center;
             gap: 8px;
@@ -516,6 +516,7 @@
     <header class="header-bg text-white py-16 px-4 text-center">
         <div class="max-w-4xl mx-auto">
             <img src="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" alt="Logotipo Sâmia" class="h-64 mx-auto mb-4 object-contain">
+            <p class="text-2xl mb-8">Pizzaria Artesanal</p>
             <div class="flex justify-center space-x-4">
                 <a href="#menu" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
                     Ver Cardápio
@@ -837,7 +838,10 @@
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
-                <p>&copy; 2023 Sâmia. Todos os direitos reservados.</p>
+                <p class="mb-2">
+                    <a href="https://wa.me/5587996070638?text=Ol%C3%A1%20vi%20o%20card%C3%A1pio%20digital%20desenvolveu%20para%20Pizzaria%20S%C3%A2mia%20e%20fiquei%20interessado%2C%20gostaria%20de%20solicitar%20um%20or%C3%A7amento%20para%20o%20meu%20projeto" target="_blank" class="hover:text-white">Desenvolvido por Willian Soares</a>
+                </p>
+                <p>&copy; 2025 Sâmia. Todos os direitos reservados.</p>
             </div>
         </div>
     </footer>
@@ -1182,8 +1186,9 @@
                             const inputName = isSingleChoice ? category : `multiple-${category}`;
                             const priceDisplay = ingredient.price > 0 ? `+ R$ ${ingredient.price.toFixed(2).replace('.', ',')}` : '';
                             
-                            const optionDiv = document.createElement('div');
-                            optionDiv.className = 'ingredient-option';
+                            const label = document.createElement('label');
+                            label.className = 'ingredient-option';
+                            label.htmlFor = `${inputName}-${ingredient.id}`;
                             
                             const input = document.createElement('input');
                             input.type = inputType;
@@ -1193,22 +1198,21 @@
                             input.dataset.price = ingredient.price;
                             input.classList.add('form-radio');
 
-                            const label = document.createElement('label');
-                            label.htmlFor = input.id;
-                            label.innerHTML = `${ingredient.name} <span class="price">${priceDisplay}</span>`;
+                            const textSpan = document.createElement('span');
+                            textSpan.className = "flex-grow";
+                            textSpan.textContent = ingredient.name;
 
-                            optionDiv.appendChild(input);
-                            optionDiv.appendChild(label);
-                            
-                            optionDiv.addEventListener('click', (e) => {
-                                if (e.target.tagName !== 'INPUT') {
-                                    input.checked = !input.checked;
-                                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                            });
+                            const priceSpan = document.createElement('span');
+                            priceSpan.className = "price";
+                            priceSpan.textContent = priceDisplay;
+
+                            label.appendChild(input);
+                            label.appendChild(textSpan);
+                            label.appendChild(priceSpan);
                             
                             input.addEventListener('change', (e) => {
                                 const currentInput = e.target;
+                                const currentLabel = currentInput.closest('.ingredient-option');
                                 const currentCategory = currentInput.name.replace('multiple-', '');
                                 const isCurrentSingleChoice = allBurgerIngredients[currentCategory][0]?.isSingleChoice;
                                 const limit = allBurgerIngredients[currentCategory][0]?.limit || Infinity;
@@ -1219,9 +1223,9 @@
                                     });
                                 }
                                 if (currentInput.checked) {
-                                    currentInput.closest('.ingredient-option').classList.add('selected');
+                                    currentLabel.classList.add('selected');
                                 } else {
-                                    currentInput.closest('.ingredient-option').classList.remove('selected');
+                                    currentLabel.classList.remove('selected');
                                 }
                                 
                                 if (!isSingleChoice && limit !== Infinity) {
@@ -1236,7 +1240,7 @@
                                 updateBurgerPrice();
                             });
 
-                            categoryDiv.appendChild(optionDiv);
+                            categoryDiv.appendChild(label);
                         });
                         burgerIngredientsContainer.appendChild(categoryDiv);
                     }
@@ -3003,9 +3007,20 @@
                 }, 3000); 
             });
             
-            document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === "visible") {
-                    loadMenuAndRender();
+            window.addEventListener('scroll', () => {
+                const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
+                
+                if (isAtBottom) {
+                    cartButton.style.opacity = '0';
+                    cartButton.style.pointerEvents = 'none';
+                    promotionButton.style.opacity = '0';
+                    promotionButton.style.pointerEvents = 'none';
+                } else {
+                    cartButton.style.opacity = '1';
+                    cartButton.style.pointerEvents = 'auto';
+                    promotionButton.style.opacity = '1';
+                    promotionButton.style.pointerEvents = 'auto';
+                    updatePromotionButtonVisibility();
                 }
             });
 
