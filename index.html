@@ -1,9 +1,11 @@
+teste
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sâmia - Cardápio Online</title>
+    <meta name="theme-color" content="#f8f4e9"/>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="https://raw.githubusercontent.com/WillianSoares93/catalogo_pizzaria/refs/heads/main/logo.png" type="image/png">
@@ -524,7 +526,7 @@
 
     <section id="menu" class="py-8 px-4 max-w-6xl mx-auto">
         <div class="text-center mb-8">
-            <h2 class="text-4xl font-bold text-gray-800 mb-4">Nosso Cardápio- teste</h2>
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Nosso Cardápio</h2>
             <p class="text-gray-600 text-lg mx-auto">Escolha sua pizza favorita ou uma bebida refrescante!</p>
         </div>
 
@@ -1381,35 +1383,30 @@
                                 }
 
                                 if (item.isPizza) {
-                                    // *** ALTERAÇÃO INICIA AQUI ***
-                                    let priceDisplayHtml = '';
-                                    if (item.price4Slices > 0 || item.price6Slices > 0 || item.basePrice > 0) {
-                                        priceDisplayHtml += '<div class="flex justify-around items-center mt-4 pt-4 border-t border-gray-200">';
-                                        if (item.price4Slices > 0) {
-                                            priceDisplayHtml += `
-                                                <div class="text-center px-1">
-                                                    <span class="font-bold text-gray-800 text-sm md:text-base whitespace-nowrap">4 Fatias</span>
-                                                    <p class="font-bold text-red-600 text-base md:text-lg">R$ ${item.price4Slices.toFixed(2).replace('.', ',')}</p>
-                                                </div>
-                                            `;
-                                        }
-                                        if (item.price6Slices > 0) {
-                                            priceDisplayHtml += `
-                                                <div class="text-center px-1">
-                                                    <span class="font-bold text-gray-800 text-sm md:text-base whitespace-nowrap">6 Fatias</span>
-                                                    <p class="font-bold text-red-600 text-base md:text-lg">R$ ${item.price6Slices.toFixed(2).replace('.', ',')}</p>
-                                                </div>
-                                            `;
-                                        }
-                                        if (item.basePrice > 0) {
-                                            priceDisplayHtml += `
-                                                <div class="text-center px-1">
-                                                    <span class="font-bold text-gray-800 text-sm md:text-base whitespace-nowrap">8 Fatias</span>
-                                                    <p class="font-bold text-red-600 text-base md:text-lg">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</p>
-                                                </div>
-                                            `;
-                                        }
-                                        priceDisplayHtml += '</div>';
+                                    let pricesHtml = '';
+                                    if (item.price4Slices > 0) {
+                                        pricesHtml += `
+                                            <div class="text-center px-1">
+                                                <span class="text-xs text-gray-500">4 Fatias</span>
+                                                <p class="font-bold text-red-600 whitespace-nowrap">R$ ${item.price4Slices.toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        `;
+                                    }
+                                    if (item.price6Slices > 0) {
+                                        pricesHtml += `
+                                            <div class="text-center px-2 border-l border-r border-gray-200">
+                                                <span class="text-xs text-gray-500">6 Fatias</span>
+                                                <p class="font-bold text-red-600 whitespace-nowrap">R$ ${item.price6Slices.toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        `;
+                                    }
+                                    if (item.basePrice > 0) {
+                                        pricesHtml += `
+                                            <div class="text-center px-1">
+                                                <span class="text-xs text-gray-500">8 Fatias</span>
+                                                <p class="font-bold text-red-600 whitespace-nowrap">R$ ${item.basePrice.toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        `;
                                     }
 
                                     itemHtml = `
@@ -1418,17 +1415,21 @@
                                             <div class="p-6 flex flex-col flex-grow">
                                                 <h3 class="text-xl font-bold text-gray-800 mb-2">${item.name}</h3>
                                                 <p class="text-gray-600 text-sm mb-4 flex-grow">${item.description}</p>
-                                                ${priceDisplayHtml}
-                                                <div class="flex justify-end mt-4">
-                                                    <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300"
-                                                            data-item-id="${item.id}" data-image-url="${trimmedImageUrl}">
-                                                        Adicionar
-                                                    </button>
+                                                
+                                                <div class="mt-auto pt-4 border-t border-gray-100">
+                                                    <div class="flex justify-between items-center">
+                                                        <div class="flex space-x-1 items-baseline">
+                                                            ${pricesHtml}
+                                                        </div>
+                                                        <button class="add-item-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition duration-300 flex-shrink-0"
+                                                                data-item-id="${item.id}" data-image-url="${trimmedImageUrl}">
+                                                            Adicionar
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     `;
-                                    // *** ALTERAÇÃO TERMINA AQUI ***
                                 } else {
                                     let imageElement = '';
                                     const trimmedImageUrl = String(item.imageUrl || '').trim();
@@ -2381,6 +2382,33 @@
                         return;
                     }
 
+                    // *** ALTERAÇÃO INICIA AQUI ***
+                    // Primeiro, verifica o cenário específico da pizza meio a meio inválida
+                    let invalidScrollAttempt = false;
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && isSelectingHalfPizza && !isFirstHalfPromotional) {
+                            const category = entry.target.id.replace('-section', '').toLowerCase();
+                            if (category === 'promocionais') {
+                                const originalCategory = firstHalfPizza.category.toLowerCase();
+                                setActiveCategoryButton(originalCategory); // Reverte o botão ativo
+                                currentActiveCategoryByScroll = originalCategory;
+                                
+                                isScrollingFromClick = true;
+                                document.getElementById(`${originalCategory}-section`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                setTimeout(() => { isScrollingFromClick = false; }, 700);
+
+                                showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
+                                invalidScrollAttempt = true;
+                            }
+                        }
+                    });
+
+                    if (invalidScrollAttempt) {
+                        return; // Interrompe a execução se um scroll inválido foi detectado
+                    }
+                    // *** ALTERAÇÃO TERMINA AQUI ***
+
+                    // Lógica original para determinar a categoria ativa para a barra de navegação
                     const stickyHeaderHeight = getStickyHeaderHeight();
                     let newActiveCategory = null;
                     let minDistance = Infinity; 
@@ -2422,17 +2450,6 @@
                                 document.getElementById('promocionais-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 setTimeout(() => { isScrollingFromClick = false; }, 700); 
                                 showMessageModal('Para pizzas promocionais, a segunda metade deve ser também de uma pizza promocional.');
-                                return; 
-                            }
-                        } else { 
-                            if (newActiveCategory && newActiveCategory.toLowerCase() === 'promocionais') {
-                                const originalCategory = firstHalfPizza.category.toLowerCase();
-                                setActiveCategoryButton(originalCategory);
-                                currentActiveCategoryByScroll = originalCategory; 
-                                isScrollingFromClick = true; 
-                                document.getElementById(`${originalCategory}-section`).scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                setTimeout(() => { isScrollingFromClick = false; }, 700); 
-                                showMessageModal('Você começou a montar uma pizza meio a meio com um sabor não promocional. A segunda metade não pode ser de uma pizza promocional.');
                                 return; 
                             }
                         }
@@ -2671,6 +2688,7 @@
                     }, 100);
 
                 } catch (error) {
+                    console.error('Erro ao carregar o cardápio:', error);
                     showMessageModal('Não foi possível carregar o cardápio no momento. Por favor, tente novamente mais tarde.');
                 }
             }
