@@ -1,4 +1,4 @@
-const CACHE_NAME = 'samiateste-56';
+const CACHE_NAME = 'teste-7';
 const urlsToCache = [
   './',
   'index.html',
