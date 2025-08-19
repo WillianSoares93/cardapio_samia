@@ -8,7 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="https://raw.githubusercontent.com/WillianSoares93/cardapio_samia/refs/heads/main/logo.png" type="image/png">
-    <link rel="manifest" href="/manifest.json">
+    <!-- CORREÇÃO: Caminho relativo para o manifest.json -->
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
@@ -1329,20 +1330,29 @@
                 updatePromotionButtonVisibility();
             }
             
+            function parsePrice(value) {
+                if (typeof value !== 'string' || value.trim() === '') {
+                    return 0;
+                }
+                const numericString = value.replace(',', '.');
+                const parsed = parseFloat(numericString);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            
             function updateBurgerPrice() {
-                let total = parseFloat(burgerBuilderModal.dataset.basePrice) || 0;
+                let total = parsePrice(burgerBuilderModal.dataset.basePrice);
                 
-                const selectedRadios = document.querySelectorAll('input[type="radio"]:checked');
+                const selectedRadios = document.querySelectorAll('#burger-builder-modal input[type="radio"]:checked');
                 selectedRadios.forEach(radio => {
-                    total += parseFloat(radio.dataset.price);
+                    total += parsePrice(radio.dataset.price);
                 });
 
-                const quantityOptions = document.querySelectorAll('.ingredient-option .quantity-display');
+                const quantityOptions = document.querySelectorAll('#burger-builder-modal .ingredient-option .quantity-display');
                 quantityOptions.forEach(display => {
                     const quantity = parseInt(display.textContent, 10);
                     if (quantity > 0) {
                         const optionDiv = display.closest('.ingredient-option');
-                        const price = parseFloat(optionDiv.dataset.price);
+                        const price = parsePrice(optionDiv.dataset.price);
                         total += quantity * price;
                     }
                 });
@@ -2062,6 +2072,7 @@
                 toggleAddItemButtons(true); 
                 toggleCategoryButtons(true);
                 updateCheckoutButtonText();
+                burgerBuilderModal.dataset.basePrice = '0';
             }
             
             function updateCartCount() {
@@ -2078,68 +2089,50 @@
                 let message = 'Olá! Gostaria de fazer o seguinte pedido:\n\n';
                 let subtotal = 0;
 
-                const nonDiscountItems = order.filter(item => item.type !== 'discount');
-                nonDiscountItems.forEach(item => {
-                    let itemName = item.name;
-                    let itemDescription = '';
-
-                    if (item.type === 'promotion') {
-                        itemName = item.name.replace('<i class="fas fa-tags text-red-600 mr-2"></i> ', ''); 
-                    } else if (item.selected_slices) {
-                        let sizeLabel = `${item.selected_slices} FATIAS`.toUpperCase();
-                        message += `- ${sizeLabel}: ${item.name} R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
-                        return;
-                    } else if (item.type === 'custom_burger') {
-                        itemName = `Hambúrguer Personalizado`;
-                        itemDescription = item.ingredients.map(ing => `  - ${ing.quantity > 1 ? `${ing.quantity}x ` : ''}${ing.name}`).join('\n');
-                        message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n${itemDescription}\n`;
-                    }
-
-                    if (item.type !== 'custom_burger') {
-                        message += `- ${itemName}: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
-                    }
+                order.forEach(item => {
                     subtotal += item.price;
+                    if (item.type === 'custom_burger') {
+                        message += `- *${item.name}:* R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                        message += `  *Ingredientes:*\n`;
+                        item.ingredients.forEach(ing => {
+                            message += `  - ${ing.name} *(x${ing.quantity})*\n`;
+                        });
+                    } else if (item.selected_slices) {
+                        let sizeLabel = `${item.selected_slices} FATIAS`;
+                        message += `- *${sizeLabel}:* ${item.name} R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                    } else {
+                        message += `- ${item.name}: R$ ${item.price.toFixed(2).replace('.', ',')}\n`;
+                    }
                 });
+
+                message += `\nSubtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}`;
                 
                 let finalDiscountAmount = 0;
                 if (discountPromotion) {
                     finalDiscountAmount = subtotal * (discountPromotion.promoPrice / 100);
-                    message += `\nDesconto (${discountPromotion.promoPrice}%): -R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
+                    message += `\nDesconto: -R$ ${finalDiscountAmount.toFixed(2).replace('.', ',')}`;
                 }
 
+                message += `\nTaxa de entrega: R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`;
                 const total = subtotal - finalDiscountAmount + selectedAddress.deliveryFee;
-
-                message += `\nSubtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-                message += `\nTaxa de entrega (${selectedAddress.bairro || 'Não informado'}): R$ ${selectedAddress.deliveryFee.toFixed(2).replace('.', ',')}`;
-                message += `\nTotal: R$ ${total.toFixed(2).replace('.', ',')}`;
-                
-                if (selectedAddress.clientName && selectedAddress.bairro && selectedAddress.rua && selectedAddress.numero) {
-                    message += `\n\nDados da Entrega:\n`;
-                    message += `Nome: ${selectedAddress.clientName}\n`;
-                    message += `Bairro: ${selectedAddress.bairro}\n`;
-                    message += `Rua: ${selectedAddress.rua}, Nº ${selectedAddress.numero}\n`;
-                    if (selectedAddress.referencia) {
-                        message += `Ponto de Referência: ${selectedAddress.referencia}\n`;
-                    }
-                } else {
-                    message += `\n\nDados da Entrega: Não informado. Por favor, confirme o endereço e nome com o cliente.`
-                }
-
+                message += `\n*Total: R$ ${total.toFixed(2).replace('.', ',')}*`;
 
                 if (selectedPaymentMethod) {
+                    let paymentDetails = '';
                     if (typeof selectedPaymentMethod === 'object' && selectedPaymentMethod.method === 'Dinheiro') {
-                        message += `\nForma de Pagamento: ${selectedPaymentMethod.method}`;
-                        message += `\nTroco para: R$ ${selectedPaymentMethod.trocoPara.toFixed(2).replace('.', ',')}`;
-                        message += `\nTroco: R$ ${selectedPaymentMethod.trocoTotal.toFixed(2).replace('.', ',')}`;
-                    } else if (selectedPaymentMethod === 'Pix' && contactInfo.chavepix) {
-                         message += `\nForma de Pagamento: Pix`;
-                         message += `\nChave Pix: ${contactInfo.chavepix}`;
+                        paymentDetails = `Dinheiro (Troco para: R$ ${selectedPaymentMethod.trocoPara.toFixed(2).replace('.', ',')})`;
                     } else {
-                        message += `\nForma de Pagamento: ${selectedPaymentMethod}`;
+                        paymentDetails = selectedPaymentMethod;
                     }
+                    message += `\n*Pagamento:* ${paymentDetails}`;
                 }
 
-                message += '\n\nObrigado!';
+                message += `\n\n*Dados da Entrega:*`;
+                message += `\nNome: ${selectedAddress.clientName}`;
+                message += `\nEndereço: ${selectedAddress.rua}, Nº ${selectedAddress.numero}, ${selectedAddress.bairro}`;
+                if (selectedAddress.referencia) {
+                    message += `\nReferência: ${selectedAddress.referencia}`;
+                }
 
                 const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappUrl, '_blank');
@@ -2764,6 +2757,35 @@
                 return false;
             }
 
+            // --- INÍCIO DAS CORREÇÕES PARA O POP-UP DE INSTALAÇÃO ---
+
+            function showInstallPrompt() {
+                const isInstalled = isPwaInstalled();
+                console.log(`Tentando mostrar o prompt. deferredPrompt: ${!!deferredPrompt}, App instalado: ${isInstalled}`);
+                // Mostra o prompt apenas se o evento foi capturado e o app não está instalado
+                if (deferredPrompt && !isInstalled) {
+                    const installPromptModal = document.getElementById('install-prompt-modal');
+                    console.log('Condições satisfeitas. Mostrando o modal de instalação.');
+                    installPromptModal.style.display = 'flex';
+                } else {
+                     console.log('Condições não satisfeitas. O modal não será exibido.');
+                }
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                console.log('Evento beforeinstallprompt disparado.');
+                // Previne o mini-infobar de aparecer em alguns navegadores
+                e.preventDefault();
+                // Guarda o evento para que possa ser acionado mais tarde.
+                deferredPrompt = e;
+                // Mostra o nosso modal de instalação customizado
+                console.log('deferredPrompt foi guardado. Tentando mostrar o modal.');
+                showInstallPrompt();
+            });
+
+            // --- FIM DAS CORREÇÕES PARA O POP-UP DE INSTALAÇÃO ---
+
+
             cartButton.addEventListener('click', toggleOrderSidebar);
             closeSidebarBtn.addEventListener('click', closeOrderSidebar);
             backToMenuBtn.addEventListener('click', backToMenu);
@@ -3044,23 +3066,19 @@
                 showAddressInputModal();
             });
 
+            // CORREÇÃO: Caminho relativo para o service-worker.js e logs de depuração
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {})
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registrado com sucesso:', registration);
+                    })
                     .catch(error => {
-                        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-                        }
+                        console.error('Falha ao registrar o Service Worker:', error);
                     });
             }
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-            });
-
+            
             installAppButton.addEventListener('click', () => {
                 installPromptModal.style.display = 'none';
-                
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
                     deferredPrompt.userChoice.then((choiceResult) => {
@@ -3081,14 +3099,6 @@
             window.addEventListener('appinstalled', () => {
                 installPromptModal.style.display = 'none';
             });
-
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    if (!isPwaInstalled() && deferredPrompt) {
-                        installPromptModal.style.display = 'flex';
-                    }
-                }, 3000); 
-            });
             
             window.addEventListener('scroll', () => {
                 const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
@@ -3108,6 +3118,10 @@
             });
 
             loadMenuAndRender();
+            
+            // Adiciona um pequeno atraso para não ser intrusivo ao carregar a página
+            setTimeout(showInstallPrompt, 5000); 
+
         });
     </script>
 </body>
