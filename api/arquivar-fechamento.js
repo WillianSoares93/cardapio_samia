@@ -16,9 +16,8 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- CONFIGURAÇÃO GOOGLE SHEETS (REVERTIDA PARA O MÉTODO ORIGINAL) ---
-// Revertido para usar as variáveis de ambiente de E-mail/Chave,
-// conforme sua explicação de que esta planilha está em outra conta.
+// --- CONFIGURAÇÃO GOOGLE SHEETS (REVERTIDO) ---
+// Revertendo para o método de E-mail/Chave, conforme sua solicitação.
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined;
 
@@ -101,4 +100,6 @@ export default async (req, res) => {
         res.status(500).json({ error: 'Erro interno no servidor.', details: error.message });
     }
 };
+
+
 
