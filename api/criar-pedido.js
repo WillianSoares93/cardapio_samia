@@ -365,18 +365,21 @@ export default async function handler(req, res) {
         const checkTimeframe = Timestamp.fromDate(new Date(Date.now() - 3 * 60 * 1000)); // Últimos 3 minutos
         log(`Janela de tempo para duplicidade inicia em: ${checkTimeframe.toDate().toISOString()}`);
 
-        // --- ATUALIZAÇÃO: Consulta de duplicidade simplificada ---
-        // A consulta anterior era muito complexa e exigia um índice composto muito frágil.
-        // Esta nova consulta verifica apenas pelo "hash" (o DNA dos itens) e pelo tempo,
-        // o que é uma verificação de duplicidade mais robusta e requer um índice mais simples.
+        // **REVERTIDO: Voltando para a consulta de duplicidade completa conforme solicitado.**
         let duplicateQuery = db.collection('pedidos')
+            .where('endereco.bairro', '==', bairro) // <-- Alterado de address para endereco
+            .where('customerName', '==', customerName)
             .where('orderHash', '==', orderHash)
             .where('timestamp', '>=', checkTimeframe);
-        
-        // Removemos as verificações por 'endereco.bairro', 'customerName' e 'customerPhone'
-        // que causavam a falha de FAILED_PRECONDITION.
 
-        log("Executando query de duplicidade simplificada (hash + tempo)...");
+        // Adiciona o filtro de telefone apenas se ele existir
+        if (customerPhone) {
+             duplicateQuery = duplicateQuery.where('customerPhone', '==', customerPhone);
+        } else {
+             duplicateQuery = duplicateQuery.where('customerPhone', '==', null);
+        }
+
+        log("Executando query de duplicidade alinhada ao índice (completa)...");
         const duplicateSnapshot = await duplicateQuery.limit(1).get();
 
         // ****** CORREÇÃO APLICADA AQUI ******
@@ -439,7 +442,7 @@ export default async function handler(req, res) {
                 price: Number(item.price || 0),
                 type: item.type || 'full',
                 ...(item.ingredients && { ingredients: item.ingredients.map(ing => ({ name: ing.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1) })) }),
-                ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ext.price || 0), quantity: Number(ext.quantity || 1), placement: ext.placement })) }),
+                ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1), placement: ext.placement })) }),
                 ...(item.originalItem && { originalItem: item.originalItem }),
                 ...(item.selected_slices && { selected_slices: item.selected_slices }),
                 ...(item.firstHalfData && { firstHalfData: item.firstHalfData }),
