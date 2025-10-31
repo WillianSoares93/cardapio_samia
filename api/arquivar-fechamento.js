@@ -16,16 +16,19 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- CONFIGURAÇÃO GOOGLE SHEETS ---
+// --- CONFIGURAÇÃO GOOGLE SHEETS (REVERTIDA PARA O MÉTODO ORIGINAL) ---
+// Revertido para usar as variáveis de ambiente de E-mail/Chave,
+// conforme sua explicação de que esta planilha está em outra conta.
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined;
+
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = process.env.CASH_CLOSURES_SHEET_NAME || 'fechamentos_caixa';
 
 const auth = new google.auth.GoogleAuth({
     credentials: {
-        client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: GOOGLE_PRIVATE_KEY,
+        client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL, // Usa a variável de e-mail
+        private_key: GOOGLE_PRIVATE_KEY, // Usa a variável de chave
     },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
@@ -36,6 +39,12 @@ const sheets = google.sheets({ version: 'v4', auth });
 export default async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    // Validação extra para garantir que as credenciais carregaram
+    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+        console.error("Erro em /api/arquivar-fechamento: GOOGLE_SERVICE_ACCOUNT_EMAIL ou GOOGLE_PRIVATE_KEY não foram carregadas.");
+        return res.status(500).json({ error: 'Erro interno no servidor: Falha ao carregar credenciais da API do Sheets.' });
     }
 
     try {
@@ -92,3 +101,4 @@ export default async (req, res) => {
         res.status(500).json({ error: 'Erro interno no servidor.', details: error.message });
     }
 };
+
