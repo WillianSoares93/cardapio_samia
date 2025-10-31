@@ -14,6 +14,16 @@ const errorLog = (message, error, ...args) => console.error(`[ERROR ${new Date()
 // const __filename = fileURLToPath(import.meta.url); // Removido - Desnecessário
 // const __dirname = dirname(__filename); // Removido - Desnecessário
 
+// --- ADICIONADO: Configuração explícita do projeto correto ---
+const firebaseConfig = {
+  apiKey: "AIzaSyB9LJ-7bOvHGYyFE_H2Qd7XFcyjmSPq_ro",
+  authDomain: "samia-cardapio.firebaseapp.com",
+  projectId: "samia-cardapio",
+  storageBucket: "samia-cardapio.firebasestorage.app",
+  messagingSenderId: "223260436641",
+  appId: "1:223260436641:web:adf78e77a0267f66f1e8e0"
+};
+
 // --- INICIALIZAÇÃO FIREBASE ADMIN SDK ---
 let serviceAccountJson; // Variável para guardar o JSON decodificado
 let firebaseInitialized = false;
@@ -44,12 +54,16 @@ if (getApps().length === 0) {
 
     if (serviceAccountJson) {
         try {
-            log("Inicializando Firebase Admin SDK com credenciais decodificadas...");
+            log("Inicializando Firebase Admin SDK com credenciais decodificadas e ID do projeto explícito...");
+            // --- ATUALIZADO: Força o uso do projectId, databaseURL e storageBucket corretos ---
             initializeApp({
-                credential: cert(serviceAccountJson)
+                credential: cert(serviceAccountJson),
+                projectId: firebaseConfig.projectId, // Força o ID do projeto correto
+                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
+                storageBucket: firebaseConfig.storageBucket
             });
             firebaseInitialized = true;
-            log("Firebase Admin SDK inicializado com sucesso.");
+            log("Firebase Admin SDK inicializado com sucesso no projeto: " + firebaseConfig.projectId);
         } catch (initError) {
             errorLog('Falha na inicialização do Firebase Admin SDK:', initError);
             initializationError = `Falha na inicialização do Firebase: ${initError.message}`;
