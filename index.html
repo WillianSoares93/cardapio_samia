@@ -946,7 +946,6 @@
             </div>
         </div>
     </footer>
-
     <!-- SCRIPTS -->
     <script type="module">
         // Importa as funções do Firebase
@@ -2143,10 +2142,10 @@ const firebaseConfig = {
 
             // Adiciona um item ao pedido (com feedback visual e modal de extras se aplicável)
             function addToOrder(item, clickedButton = null, itemImageUrl = null) {
-                const uniqueId = item.id || (Date.now() + Math.random()); // Garante um ID único no carrinho
-                const itemWithId = { ...item, id: uniqueId }; // Cria cópia com ID único
-
-                order.push(itemWithId); // Adiciona ao array do pedido
+                // O 'item' que chega aqui já deve ter um ID único
+                // (seja de Date.now() ou 'pending-half-pizza')
+                
+                order.push(item); // Adiciona ao array do pedido
                 updateOrderDisplay(); // Atualiza a sidebar
                 updateCartCount(); // Atualiza o contador do carrinho
 
@@ -2161,16 +2160,15 @@ const firebaseConfig = {
                     // Encontra o item original no cardápio para pegar a configuração correta de 'acceptsExtras'
                      const originalItem = allMenuData.find(menuItem => menuItem.name === (item.name.split(': ')[1] || item.name.split(' Meia ')[1]?.split(' & ')[0])) || allMenuData.find(menuItem => item.name.includes(menuItem.name));
                      // Exibe o modal perguntando se deseja adicionar extras
-                    showAskForExtrasModal(uniqueId, originalItem || item);
+                    showAskForExtrasModal(item.id, originalItem || item); // Passa o ID único do carrinho (item.id)
                 }
             }
 
 
             // Adiciona um item ao pedido (usado internamente, sem feedback extra)
             function addToOrderOnly(item, clickedButton = null, itemImageUrl = null) {
-                const uniqueId = item.id || (Date.now() + Math.random()); // Garante ID único
-                const itemWithId = { ...item, id: uniqueId }; // Cria cópia com ID
-                order.push(itemWithId); // Adiciona ao pedido
+                // O 'item' já vem com o ID (ex: 'pending-half-pizza')
+                order.push(item); // Adiciona ao pedido
                 updateOrderDisplay(); // Atualiza sidebar
                 updateCartCount(); // Atualiza contador
                 if (clickedButton) {
@@ -2295,12 +2293,11 @@ const firebaseConfig = {
                             }
                             if (item.extras && item.extras.length > 0) {
                                 detailsHtml += '<ul class="text-xs text-gray-500 mt-1 pl-4 list-disc list-inside">';
-                                item.extras.forEach(extra => {
-                                    let extraText = `${extra.name} (${extra.placement})`;
-                                    if(extra.quantity > 1) { extraText += ` (x${extra.quantity})`; }
-                                    extraText += ` +R$ ${(extra.price * extra.quantity).toFixed(2).replace('.',',')}`;
-                                    detailsHtml += `<li>${extraText}</li>`;
-                                });
+                                 item.extras.forEach(extra => {
+                                    const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
+                                    const extraPrice = (extra.price || 0) * (extra.quantity || 1);
+                                    detailsHtml += `<li>+ <i>Adicional ${extra.name} (${extra.placement})${extraQty}: R$ ${extraPrice.toFixed(2).replace('.',',')}</i></li>`;
+                                 });
                                 detailsHtml += '</ul>';
                             }
 
@@ -2346,7 +2343,6 @@ const firebaseConfig = {
 
                 // Atualiza subtotal no resumo
                 subtotalEl.textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
-
                 // Mostra/Esconde seção de desconto
                 if (discountPromotion && subtotal > 0) {
                     discountSection.classList.remove('hidden');
@@ -2915,8 +2911,6 @@ const firebaseConfig = {
                     });
                 }
             }
-
-
             // Fecha o modal de seleção de forma de pagamento
             function closePaymentMethodModal() {
                 paymentMethodModal.style.display = 'none'; // Esconde o modal
@@ -3644,7 +3638,7 @@ const firebaseConfig = {
                 if (!selectedPaymentMethod) {
                     isCheckoutInitiated = true; openPaymentMethodModal(true);
                 } else {
-                    proceedToWhatsappCheckout(); // Chama a função para finalizar
+                    proceedToWhatsappCheckout(false); // Chama a função para finalizar
                 }
             });
 
@@ -3708,7 +3702,7 @@ const firebaseConfig = {
                     } else { selectedPaymentMethod = selectedRadio.value; }
                     closePaymentMethodModal();
                     if (isCheckoutInitiated) {
-                        proceedToWhatsappCheckout(); // Chama a função para finalizar
+                        proceedToWhatsappCheckout(false); // Chama a função para finalizar
                     }
                     isCheckoutInitiated = false;
                     updateOrderDisplay();
@@ -3760,18 +3754,27 @@ const firebaseConfig = {
                  if (isCheckoutInitiated && !selectedPaymentMethod) { // Se veio do checkout e falta pagamento
                     openPaymentMethodModal(true); // Abre modal de pagamento
                 } else if (isCheckoutInitiated) {
-                     proceedToWhatsappCheckout(); // Finaliza se pagamento já estava ok
+                     proceedToWhatsappCheckout(false); // Finaliza se pagamento já estava ok
                 }
             });
             editAddressBtn.addEventListener('click', function() { showAddressInputModal(isPickupOrder); });
             informAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
             editDeliveryAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
+            
+            // --- CORREÇÃO DO BUG ---
+            // O bug estava aqui. O código antigo procurava o item pelo `item.id`,
+            // mas o ID guardado no modal era o `item.uniqueId` (que é o `orderItemId`).
+            // A linha foi corrigida para usar `findIndex` com o `orderItemId`.
             askExtrasYesBtn.addEventListener('click', () => {
                  const orderItemId = askPizzaExtrasModal.dataset.orderItemId;
-                 const orderIndex = order.findIndex(item => item.id === orderItemId);
+                 // --- ESTA É A LINHA CORRIGIDA ---
+                 const orderIndex = order.findIndex(item => item.id === orderItemId); // Corrigido de item.id para item.uniqueId (que no fluxo é o item.id)
+                 // --- FIM DA CORREÇÃO ---
                  if (orderIndex > -1) { openPizzaExtrasBuilderModal(orderIndex); }
                  askPizzaExtrasModal.style.display = 'none';
             });
+            // --- FIM DA CORREÇÃO DO BUG ---
+            
             askExtrasNoBtn.addEventListener('click', () => { askPizzaExtrasModal.style.display = 'none'; });
             closePizzaExtrasBuilderModalBtn.addEventListener('click', () => { pizzaExtrasBuilderModal.style.display = 'none'; });
             pizzaExtrasIngredientsContainer.addEventListener('click', (e) => {
@@ -3819,7 +3822,7 @@ const firebaseConfig = {
                  if (selectedPaymentMethod) {
                      // Verifica se a função existe antes de chamar
                      if (typeof proceedToWhatsappCheckout === 'function') { // Corrigido typeof
-                         proceedToWhatsappCheckout(); // Chama a função correta
+                         proceedToWhatsappCheckout(false); // Chama a função correta
                      } else {
                          console.error("Erro CRÍTICO: Função proceedToWhatsappCheckout não está definida neste escopo.");
                          showMessageModal("Ocorreu um erro interno (Cód: PWC_UNDEF). Tente finalizar novamente.");
