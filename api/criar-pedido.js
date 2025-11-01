@@ -362,7 +362,7 @@ export default async function handler(req, res) {
         }
         log(`Hash gerado (prefixo): ${orderHash.substring(0, 50)}...`);
 
-        const checkTimeframe = Timestamp.fromDate(new Date(Date.now() - 3 * 60 * 1000)); // Últimos 3 minutos
+        const checkTimeframe = Timestamp.fromDate(new Date(Date.now() - 10 * 60 * 1000)); // Últimos 10 minutos
         log(`Janela de tempo para duplicidade inicia em: ${checkTimeframe.toDate().toISOString()}`);
 
         // **REVERTIDO: Voltando para a consulta de duplicidade completa conforme solicitado.**
