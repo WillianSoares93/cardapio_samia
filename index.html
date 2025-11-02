@@ -689,7 +689,6 @@
             <button id="ok-message-modal" class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">OK</button>
         </div>
     </div>
-
     <!-- Popup de Promoções -->
     <div id="promotion-popup" class="promotion-popup">
         <div class="modal-content">
@@ -940,7 +939,7 @@
             </div>
             <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
                 <p class="mb-2">
-                    <a href="https://wa.me/5587996070638?text=Ol%C3%A1%20vi%20o%20card%C3%A1pio%20digital%20desenvolveu%20para%20Pizzaria%20S%C3%A2mia%20e%20fiquei%20interessado%2C%20gostaria%20de%20solicitar%20um%20or%C3%A7amento%20para%20o%20meu%20projeto" target="_blank" class="hover:text-white">Desenvolvido por Willian Soares</a>
+                    <a href="https://wa.me/5587996070638?text=Ol%C3%A1%nbsp%vi%20o%20card%C3%A1pio%20digital%20desenvolveu%20para%20Pizzaria%20S%C3%A2mia%20e%20fiquei%20interessado%2C%20gostaria%20de%20solicitar%20um%20or%C3%A7amento%20para%20o%20meu%20projeto" target="_blank" class="hover:text-white">Desenvolvido por Willian Soares</a>
                 </p>
                 <p>&copy; 2025 Sâmia. Todos os direitos reservados.</p>
             </div>
@@ -3766,12 +3765,19 @@ const firebaseConfig = {
             editAddressBtn.addEventListener('click', function() { showAddressInputModal(isPickupOrder); });
             informAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
             editDeliveryAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
+            
             askExtrasYesBtn.addEventListener('click', () => {
                  const orderItemId = askPizzaExtrasModal.dataset.orderItemId;
-                 const orderIndex = order.findIndex(item => item.id === orderItemId);
-                 if (orderIndex > -1) { openPizzaExtrasBuilderModal(orderIndex); }
+                 // CORREÇÃO: Usar '==' em vez de '===' para comparar string (dataset) com número (item.id)
+                 const orderIndex = order.findIndex(item => item.id == orderItemId);
+                 if (orderIndex > -1) { 
+                    openPizzaExtrasBuilderModal(orderIndex); 
+                 } else {
+                    console.error("Não foi possível encontrar o item no pedido para adicionar extras. ID:", orderItemId);
+                 }
                  askPizzaExtrasModal.style.display = 'none';
             });
+
             askExtrasNoBtn.addEventListener('click', () => { askPizzaExtrasModal.style.display = 'none'; });
             closePizzaExtrasBuilderModalBtn.addEventListener('click', () => { pizzaExtrasBuilderModal.style.display = 'none'; });
             pizzaExtrasIngredientsContainer.addEventListener('click', (e) => {
@@ -3835,3 +3841,4 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
+
