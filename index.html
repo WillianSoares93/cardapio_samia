@@ -1,4 +1,3 @@
-teste1
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -3618,7 +3617,7 @@ const firebaseConfig = {
                 if (editBurgerBtn) { // Editar hambúrguer
                     const orderIndex = parseInt(editBurgerBtn.dataset.orderIndex, 10);
                     const itemToEdit = order[orderIndex];
-                    if (itemToEdit && itemToEdit.originalItem) { openBurgerBuilderModal(itemToEdit.originalItem, orderIndex, itemToEdit); }
+                    if (itemToEdit && itemToEdit.originalItem) { openPizzaExtrasBuilderModal(itemToEdit.originalItem, orderIndex, itemToEdit); }
                 }
             });
             closePizzaOptionModalBtn.addEventListener('click', function() { pizzaOptionModal.style.display = 'none'; updatePromotionButtonVisibility(); resetHalfPizzaSelection(); });
@@ -3731,6 +3730,8 @@ const firebaseConfig = {
 
             closeAddressModalBtn.addEventListener('click', hideAddressInputModal);
             noNumberCheckbox.addEventListener('change', function() { numberInput.disabled = this.checked; if (this.checked) numberInput.value = ''; });
+            
+            // ALTERAÇÃO: Lógica de confirmação de endereço
             confirmAddressBtn.addEventListener('click', function() { // Confirma endereço
                 const clientName = clientNameInput.value.trim();
                 const contact = contactInput.value.trim();
@@ -3771,12 +3772,15 @@ const firebaseConfig = {
                 hideAddressInputModal(); // Fecha modal
                 updateOrderDisplay(); // Atualiza sidebar com taxa e totais
                 showAddressSummary(); // Mostra resumo do endereço
-                 if (isCheckoutInitiated && !selectedPaymentMethod) { // Se veio do checkout e falta pagamento
-                    openPaymentMethodModal(true); // Abre modal de pagamento
-                } else if (isCheckoutInitiated) {
-                     proceedToWhatsappCheckout(); // Finaliza se pagamento já estava ok
-                }
+                 
+                // CORREÇÃO: Re-chama o fluxo de checkout
+                // Agora que o endereço está preenchido, ele passará pela validação de endereço
+                // e cairá na validação de bebidas.
+                 if (isCheckoutInitiated) {
+                     handleCheckoutFlow();
+                 }
             });
+            
             editAddressBtn.addEventListener('click', function() { showAddressInputModal(isPickupOrder); });
             informAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
             editDeliveryAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
