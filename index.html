@@ -2470,12 +2470,26 @@ const firebaseConfig = {
                 const totalData = { subtotal, discount: finalDiscountAmount, deliveryFee: selectedAddress.deliveryFee, finalTotal: subtotal - finalDiscountAmount + (selectedAddress.deliveryFee || 0) };
                 const observation = document.getElementById('order-observation').value.trim();
 
+                // --- INÍCIO DA CORREÇÃO ---
+                // Clona o pedido para não modificar o estado local
+                const orderForApi = JSON.parse(JSON.stringify(order)); 
+                
+                // Renomeia 'extras' para 'ingredients' em cada item do pedido
+                // O backend (API) espera 'ingredients' mas o frontend (UI) usa 'extras' para pizzas.
+                orderForApi.forEach(item => {
+                    if (item.extras) {
+                        item.ingredients = item.extras;
+                        delete item.extras;
+                    }
+                });
+                // --- FIM DA CORREÇÃO ---
+
                 // Chama a API para criar o pedido e obter o link do WhatsApp
                 fetch('/api/criar-pedido', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        order,
+                        order: orderForApi, // <-- Envia o objeto transformado
                         selectedAddress,
                         total: totalData,
                         paymentMethod: selectedPaymentMethod,
@@ -2655,7 +2669,7 @@ const firebaseConfig = {
                 }
             }
 
-                     // Rola a página de volta para a seção do menu
+            // Rola a página de volta para a seção do menu
             function backToMenu() {
                 closeOrderSidebar(); // Fecha a sidebar
                 document.getElementById('menu').scrollIntoView({ behavior: 'smooth' }); // Rola suavemente
@@ -3603,7 +3617,7 @@ const firebaseConfig = {
                 if (editBurgerBtn) { // Editar hambúrguer
                     const orderIndex = parseInt(editBurgerBtn.dataset.orderIndex, 10);
                     const itemToEdit = order[orderIndex];
-                    if (itemToEdit && itemToEdit.originalItem) { openPizzaExtrasBuilderModal(itemToEdit.originalItem, orderIndex, itemToEdit); }
+                    if (itemToEdit && itemToEdit.originalItem) { openBurgerBuilderModal(itemToEdit.originalItem, orderIndex, itemToEdit); }
                 }
             });
             closePizzaOptionModalBtn.addEventListener('click', function() { pizzaOptionModal.style.display = 'none'; updatePromotionButtonVisibility(); resetHalfPizzaSelection(); });
@@ -3716,8 +3730,6 @@ const firebaseConfig = {
 
             closeAddressModalBtn.addEventListener('click', hideAddressInputModal);
             noNumberCheckbox.addEventListener('change', function() { numberInput.disabled = this.checked; if (this.checked) numberInput.value = ''; });
-            
-            // ALTERAÇÃO: Lógica de confirmação de endereço
             confirmAddressBtn.addEventListener('click', function() { // Confirma endereço
                 const clientName = clientNameInput.value.trim();
                 const contact = contactInput.value.trim();
@@ -3758,15 +3770,12 @@ const firebaseConfig = {
                 hideAddressInputModal(); // Fecha modal
                 updateOrderDisplay(); // Atualiza sidebar com taxa e totais
                 showAddressSummary(); // Mostra resumo do endereço
-                 
-                // CORREÇÃO: Re-chama o fluxo de checkout
-                // Agora que o endereço está preenchido, ele passará pela validação de endereço
-                // e cairá na validação de bebidas.
-                 if (isCheckoutInitiated) {
-                     handleCheckoutFlow();
-                 }
+                 if (isCheckoutInitiated && !selectedPaymentMethod) { // Se veio do checkout e falta pagamento
+                    openPaymentMethodModal(true); // Abre modal de pagamento
+                } else if (isCheckoutInitiated) {
+                     proceedToWhatsappCheckout(); // Finaliza se pagamento já estava ok
+                }
             });
-            
             editAddressBtn.addEventListener('click', function() { showAddressInputModal(isPickupOrder); });
             informAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
             editDeliveryAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
@@ -3858,6 +3867,3 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
-
-
-
