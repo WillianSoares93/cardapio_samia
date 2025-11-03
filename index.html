@@ -2656,7 +2656,7 @@ const firebaseConfig = {
                 }
             }
 
-            // Rola a página de volta para a seção do menu
+                     // Rola a página de volta para a seção do menu
             function backToMenu() {
                 closeOrderSidebar(); // Fecha a sidebar
                 document.getElementById('menu').scrollIntoView({ behavior: 'smooth' }); // Rola suavemente
@@ -3277,7 +3277,7 @@ const firebaseConfig = {
             // Exibe o modal perguntando se o usuário deseja adicionar extras a um item
             function showAskForExtrasModal(orderItemId, item) {
                 // Define o título do modal com o nome do item
-                askExtrasTitle.textContent = `Turbine seu produto adicionando mais ingredientes!`;
+                askExtrasTitle.textContent = `Turbine seu ${item.name}!`;
                 // Guarda o ID do item no pedido (para saber qual item modificar depois)
                 askPizzaExtrasModal.dataset.orderItemId = orderItemId;
                 // Exibe o modal
@@ -3717,6 +3717,8 @@ const firebaseConfig = {
 
             closeAddressModalBtn.addEventListener('click', hideAddressInputModal);
             noNumberCheckbox.addEventListener('change', function() { numberInput.disabled = this.checked; if (this.checked) numberInput.value = ''; });
+            
+            // ALTERAÇÃO: Lógica de confirmação de endereço
             confirmAddressBtn.addEventListener('click', function() { // Confirma endereço
                 const clientName = clientNameInput.value.trim();
                 const contact = contactInput.value.trim();
@@ -3757,12 +3759,15 @@ const firebaseConfig = {
                 hideAddressInputModal(); // Fecha modal
                 updateOrderDisplay(); // Atualiza sidebar com taxa e totais
                 showAddressSummary(); // Mostra resumo do endereço
-                 if (isCheckoutInitiated && !selectedPaymentMethod) { // Se veio do checkout e falta pagamento
-                    openPaymentMethodModal(true); // Abre modal de pagamento
-                } else if (isCheckoutInitiated) {
-                     proceedToWhatsappCheckout(); // Finaliza se pagamento já estava ok
-                }
+                 
+                // CORREÇÃO: Re-chama o fluxo de checkout
+                // Agora que o endereço está preenchido, ele passará pela validação de endereço
+                // e cairá na validação de bebidas.
+                 if (isCheckoutInitiated) {
+                     handleCheckoutFlow();
+                 }
             });
+            
             editAddressBtn.addEventListener('click', function() { showAddressInputModal(isPickupOrder); });
             informAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
             editDeliveryAddressBtn.addEventListener('click', function() { showAddressInputModal(false); });
@@ -3854,4 +3859,6 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
+
+
 
