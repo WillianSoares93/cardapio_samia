@@ -166,153 +166,110 @@ function formatPaymentMethod(payment) {
  * @param {object} data - O corpo da requisição (req.body).
  * @returns {string} - A mensagem formatada e codificada para URL.
  */
+// --- INÍCIO DA LÓGICA DE MENSAGEM SUBSTITUÍDA (BASEADA NO ARQUIVO DO USUÁRIO) ---
 function formatOrderMessage(data) {
     const { order, selectedAddress, total, paymentMethod, observation } = data;
-    const message = [];
 
-    // --- CABEÇALHO ---
-    message.push('-- *NOVO PEDIDO* --');
-    message.push('');
-
-    // --- CLIENTE E ENDEREÇO ---
-    message.push(`*Cliente:* ${selectedAddress.clientName || 'Não informado'}`);
-
-    let addressLine = '*Endereço:* ';
-    // O frontend já ajusta o 'bairro' para 'Retirada'
-    if (selectedAddress.bairro === 'Retirada') {
-        addressLine += 'Retirada no Balcão, S/N - Retirada';
-    } else {
-        addressLine += `${selectedAddress.rua || 'Rua não informada'}, ${selectedAddress.numero || 'S/N'} - ${selectedAddress.bairro || 'Bairro não informado'}`;
-    }
-    message.push(addressLine);
-    message.push('');
-    message.push('*------------------------------------*');
-    message.push('*PEDIDO:*');
-    message.push('');
-
-    // --- AGRUPAR ITENS POR CATEGORIA ---
-    const itemsByCategory = {};
-    order.forEach(item => {
-        let category = 'OUTROS'; // Categoria padrão
-        if (item.type === 'custom_burger') {
-            category = 'BURGER MONTAVEL';
-        } else if (item.category) {
-            // Normaliza o nome da categoria para garantir consistência
-            category = item.category.toUpperCase().replace(/\(S\)/gi, '(s)');
+    const itemsText = order.map(item => {
+        
+        // Lógica do usuário para calcular o preço base (subtraindo extras)
+        let itemPrice = item.price;
+        if (item.extras && item.extras.length > 0) {
+             item.extras.forEach(extra => {
+                 const extraPrice = (extra.price || 0) * (extra.quantity || 1);
+                 itemPrice -= extraPrice;
+             });
         }
-        if (!itemsByCategory[category]) {
-            itemsByCategory[category] = [];
-        }
-        itemsByCategory[category].push(item);
-    });
+        
+        let itemString = `  • ${item.quantity || 1}x ${item.name}: ${formatCurrency(itemPrice)}`; // Usa o preço base calculado
 
-    // --- ORDEM DE EXIBIÇÃO DAS CATEGORIAS (para seguir o template) ---
-    const categoryOrder = [
-        'ENTRADAS',
-        'PIZZA(S) DOCES',
-        'PIZZA(S) TRADICIONAIS',
-        'PIZZA(S) PROMOCIONAIS',
-        'BEBIDAS',
-        'BURGER',
-        'BURGER CLÁSSICOS',
-        'BURGER MONTAVEL'
-    ];
-
-    // Adiciona quaisquer outras categorias do pedido que não estejam na lista principal
-    const allCategoriesInOrder = [...categoryOrder];
-    for (const category in itemsByCategory) {
-        if (!allCategoriesInOrder.includes(category)) {
-            allCategoriesInOrder.push(category);
-        }
-    }
-    
-    let categoriesProcessed = 0; // Para controlar o separador
-
-    // --- RENDERIZAR ITENS POR CATEGORIA ---
-    allCategoriesInOrder.forEach(category => {
-        if (itemsByCategory[category]) {
-            
-            // Adiciona separador ANTES da categoria (se não for a primeira)
-            if (categoriesProcessed > 0) {
-                 message.push('------------------------------------');
-            }
-
-            message.push(`*> ${category} <*`);
-            itemsByCategory[category].forEach(item => {
-                const quantity = item.quantity || 1;
-                const quantityText = quantity > 1 ? ` (x${quantity})` : '';
-                
-                // Limpa o nome do item
-                let itemName = (item.name || 'Item sem nome').replace(/&/g, 'e');
-                if (item.selected_slices) {
-                    itemName = itemName.replace(`${item.selected_slices} FATIAS: `, '');
-                }
-
-                // Formatação condicional por tipo de item
-                if (item.type === 'custom_burger') {
-                    // Formato Burger Montável
-                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(item.basePrice || 0)}`);
-                    if (item.ingredients && item.ingredients.length > 0) {
-                        item.ingredients.forEach(ing => {
-                            const ingQuantity = ing.quantity || 1;
-                            const ingQuantityText = ingQuantity > 1 ? ` (x${ingQuantity})` : '';
-                            const ingPrice = (ing.price || 0) * ingQuantity;
-                            message.push(`     + _${ing.name}${ingQuantityText}: ${formatCurrency(ingPrice)}_`);
-                        });
-                    }
-                    message.push(`        *Total C/ Ingredientes: ${formatCurrency(item.price)}*`);
-                
-                } else if (item.selected_slices) {
-                    // Formato Pizza
-                    message.push(`  • *${item.selected_slices} FATIAS:* ${itemName}${quantityText}: ${formatCurrency(item.price)}`);
-                
-                } else if (item.type === 'promotion') {
-                    // Formato Promoção
-                    message.push(`  • ${itemName}${quantityText} (Promo): ${formatCurrency(item.price)}`);
-
-                } else {
-                    // Formato Item Normal
-                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(item.price)}`);
-                }
-
-                // Adicionais (Extras) para pizzas (e outros itens, se houver)
-                if (item.extras && item.extras.length > 0) {
-                     item.extras.forEach(extra => {
-                        const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
-                        const extraPrice = (extra.price || 0) * (extra.quantity || 1);
-                        message.push(`     + _Adicional ${extra.name} (${extra.placement})${extraQty}: ${formatCurrency(extraPrice)}_`);
-                     });
-                }
+        if (item.extras && item.extras.length > 0) {
+            // Ordena os extras por localização (1ª, 2ª, Toda) para agrupar
+            const sortedExtras = [...item.extras].sort((a, b) => {
+                const order = { '1ª Metade': 1, '2ª Metade': 2, 'Toda': 3 };
+                return (order[a.placement] || 99) - (order[b.placement] || 99);
             });
-            categoriesProcessed++;
+            
+            itemString += `\n` + sortedExtras.map(extra => {
+                const extraQty = (extra.quantity || 1) > 1 ? ` (x${extra.quantity})` : '';
+                const extraPrice = (extra.price || 0) * (extra.quantity || 1);
+                return `     + ${extra.name} (${extra.placement || 'Toda'})${extraQty}: ${formatCurrency(extraPrice)}`;
+            }).join('\n');
+            
+            // Adiciona o total com adicionais (preço original do item)
+            itemString += `\n        *Total C/ Adicionais: ${formatCurrency(item.price)}*`; 
         }
-    });
 
-    // --- TOTAIS ---
-    message.push('------------------------------------');
-    message.push(`Subtotal: ${formatCurrency(total.subtotal)}`);
+        if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
+            // Se for burger, a formatação é um pouco diferente (já implementada na minha versão anterior)
+            // Vamos garantir que ela coexista
+            
+            // Recalcula o itemString do burger para usar o basePrice
+             itemString = `  • ${item.quantity || 1}x ${item.name}: ${formatCurrency(item.basePrice || item.price)}`;
+            
+            itemString += `\n` + item.ingredients.map(ing => {
+                const ingQuantity = ing.quantity || 1;
+                const ingQuantityText = ingQuantity > 1 ? ` (x${ingQuantity})` : '';
+                const ingPrice = (ing.price || 0) * ingQuantity;
+                // Formato do burger (ingredientes)
+                return `     + _${ing.name}${ingQuantityText}: ${formatCurrency(ingPrice)}_`;
+            }).join('\n');
+            
+            // Adiciona o total do burger (que é o item.price)
+            itemString += `\n        *Total C/ Ingredientes: ${formatCurrency(item.price)}*`;
+        }
+        return itemString;
+    }).join('\n\n'); // (Separador \n\n do arquivo do usuário)
+
+    let paymentText = '';
+    if (typeof paymentMethod === 'object' && paymentMethod.method === 'Dinheiro') {
+        const trocoPara = Number(paymentMethod.trocoPara || 0);
+        if (trocoPara > 0) {
+            paymentText = `*Pagamento:* Dinheiro (Troco para: ${formatCurrency(trocoPara)})`;
+        } else {
+            paymentText = `*Pagamento:* Dinheiro (Sem troco / Pagamento exato)`;
+        }
+    } else if (typeof paymentMethod === 'string') {
+        paymentText = `*Pagamento:* ${paymentMethod}`;
+    }
+
+    let discountText = '';
     if (total.discount > 0) {
-        message.push(`Desconto: - ${formatCurrency(total.discount)}`);
+        discountText = `Desconto: - ${formatCurrency(total.discount)}\n`;
     }
-
-    // Adiciona taxa de entrega (mesmo R$ 0,00) conforme template
-    message.push(`Taxa de Entrega: ${formatCurrency(total.deliveryFee)}`);
     
-    message.push(`*Total: ${formatCurrency(total.finalTotal)}*`);
-    message.push(`Pagamento: ${formatPaymentMethod(paymentMethod)}`);
-    message.push('');
-
-    // --- OBSERVAÇÕES ---
+    let observationText = '';
     if (observation && observation.trim() !== '') {
-        message.push('*OBSERVAÇÕES:*');
-        message.push(`_${observation.trim()}_`);
+        observationText = `\n*OBSERVAÇÕES:*\n_${observation.trim()}_`;
     }
+    
+    const addressText = selectedAddress.rua === "Retirada no Balcão" 
+        ? `${selectedAddress.rua}, S/N - Retirada`
+        : `${selectedAddress.rua}, ${selectedAddress.numero} - ${selectedAddress.bairro}`;
 
-    // Junção e codificação
-    return encodeURIComponent(message.join('\n'));
+    const fullMessage = `
+-- *NOVO PEDIDO* --
+
+*Cliente:* ${selectedAddress.clientName}
+*Endereço:* ${addressText}
+${selectedAddress.referencia ? `*Referência:* ${selectedAddress.referencia}` : ''}
+
+*------------------------------------*
+*PEDIDO:*
+${itemsText}
+------------------------------------
+Subtotal: ${formatCurrency(total.subtotal)}
+${discountText}Taxa de Entrega: ${formatCurrency(total.deliveryFee)}
+*Total: ${formatCurrency(total.finalTotal)}*
+${paymentText}
+${observationText}
+    `.trim();
+
+    // A LINHA ABAIXO FOI REMOVIDA POIS CAUSAVA O ERRO "whatsappNumber is not defined"
+    // const targetNumber = `55${whatsappNumber.replace(/\D/g, '')}`; 
+    return encodeURIComponent(fullMessage);
 }
-
-// --- FIM DAS NOVAS FUNÇÕES HELPER ---
+// --- FIM DA LÓGICA DE MENSAGEM SUBSTITUÍDA ---
 
 
 // --- HANDLER PRINCIPAL DA API ---
@@ -404,9 +361,8 @@ export default async function handler(req, res) {
         const timestamp = Timestamp.now(); // Usar este timestamp consistentemente
         log(`ID do Pedido Gerado: ${orderId}`);
 
-        // --- Montagem da Mensagem WhatsApp (NOVO PADRÃO) ---
-        log("Formatando mensagem do WhatsApp com o novo padrão...");
-        // A lógica de formatação agora está na função helper
+        // --- Montagem da Mensagem WhatsApp (AGORA USANDO A LÓGICA CORRIGIDA) ---
+        log("Formatando mensagem do WhatsApp...");
         const orderMessage = formatOrderMessage(req.body);
         log("Mensagem do WhatsApp formatada.");
         // --- Fim Mensagem WhatsApp ---
@@ -441,8 +397,17 @@ export default async function handler(req, res) {
                 name: item.name || 'Item sem nome',
                 price: Number(item.price || 0),
                 type: item.type || 'full',
-                ...(item.ingredients && { ingredients: item.ingredients.map(ing => ({ name: ing.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1) })) }),
-                ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1), placement: ext.placement })) }),
+                ...(item.ingredients && { ingredients: item.ingredients.map(ing => ({ 
+                    name: ing.name, 
+                    price: Number(ing.price || 0), // <--- 'ing.price' está CORRETO aqui
+                    quantity: Number(ing.quantity || 1) 
+                })) }),
+                ...(item.extras && { extras: item.extras.map(ext => ({ 
+                    name: ext.name, 
+                    price: Number(ext.price || 0), // <--- ESTA É A CORREÇÃO REAL
+                    quantity: Number(ext.quantity || 1), 
+                    placement: ext.placement 
+                })) }),
                 ...(item.originalItem && { originalItem: item.originalItem }),
                 ...(item.selected_slices && { selected_slices: item.selected_slices }),
                 ...(item.firstHalfData && { firstHalfData: item.firstHalfData }),
@@ -471,12 +436,6 @@ export default async function handler(req, res) {
         try {
             log(`Tentando salvar pedido ${orderId} no Firestore...`);
             const docRef = db.collection('pedidos').doc(orderId);
-
-            // ----- INÍCIO DA SIMULAÇÃO DE ERRO -----
-            //throw new Error("Erro SIMULADO ao salvar no Firestore"); // <<-- ADICIONADO PARA TESTE
-            // ----- FIM DA SIMULAÇÃO DE ERRO -----
-
-            // Esta linha não será executada durante a simulação
             await docRef.set(orderDataToSave);
             pdvSaved = true;
             log(`Pedido ${orderId} salvo com sucesso no Firestore.`);
