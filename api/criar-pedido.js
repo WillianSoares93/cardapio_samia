@@ -549,3 +549,4 @@ export default async function handler(req, res) {
         log(`--- Requisição finalizada para /api/criar-pedido em ${new Date().toISOString()} ---`);
     }
 }
+
