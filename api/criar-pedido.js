@@ -107,8 +107,11 @@ const createOrderHash = (items) => {
           const name = String(item.name || '');
           const slices = item.selected_slices || '';
           const price = item.price || 0;
+          // *** CORREÇÃO APLICADA AQUI TAMBÉM ***
+          // Garante que o Hash seja consistente, não importa se o frontend envia 'extras' ou 'ingredients'
           const ingredientsString = createSubItemString(item.ingredients || []);
           const extrasString = createSubItemString(item.extras || []);
+          // Retorna o que tiver conteúdo, ou ambos se ambos existirem (embora o frontend atual evite isso)
           return `${name}|${slices}|${price}|${ingredientsString}|${extrasString}`;
         })
         .sort((a, b) => a.localeCompare(b))
@@ -309,12 +312,14 @@ function formatOrderMessage(data) {
                     }
                 
                 } else if (item.selected_slices) {
-                    // Formato Pizza (Usa 'extras')
+                    // Formato Pizza (Usa 'extras' OU 'ingredients')
                     message.push(`  • *${item.selected_slices} FATIAS:* ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
 
-                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO) ---
-                    if (item.extras && item.extras.length > 0) {
-                         item.extras.forEach(extra => {
+                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO E CORRIGIDO) ---
+                    // *** CORREÇÃO: Procura por 'item.ingredients' (do frontend) OU 'item.extras' (fallback) ***
+                    const additions = item.ingredients || item.extras; 
+                    if (additions && additions.length > 0) {
+                         additions.forEach(extra => { // Itera sobre a variável correta
                             const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
                             const extraPrice = (extra.price || 0) * (extra.quantity || 1);
                             // CORRIGIDO: Removido "Adicional "
@@ -329,12 +334,14 @@ function formatOrderMessage(data) {
                     // --- FIM BLOCO DE EXTRAS ---
                 
                 } else {
-                    // Formato Item Normal (Entradas, Bebidas, etc) (Usa 'extras')
+                    // Formato Item Normal (Entradas, Bebidas, etc) (Usa 'extras' OU 'ingredients')
                     message.push(`  • ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
                     
-                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO) ---
-                    if (item.extras && item.extras.length > 0) {
-                         item.extras.forEach(extra => {
+                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO E CORRIGIDO) ---
+                     // *** CORREÇÃO: Procura por 'item.ingredients' (do frontend) OU 'item.extras' (fallback) ***
+                    const additions = item.ingredients || item.extras;
+                    if (additions && additions.length > 0) {
+                         additions.forEach(extra => { // Itera sobre a variável correta
                             const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
                             const extraPrice = (extra.price || 0) * (extra.quantity || 1);
                             // CORRIGIDO: Removido "Adicional "
@@ -508,6 +515,8 @@ export default async function handler(req, res) {
                 telefone: selectedAddress.telefone || null
             },
             // Demais campos na ordem desejada (mantendo os campos de índice também)
+            // *** CORREÇÃO: Salva 'ingredients' E 'extras' se ambos existirem,
+            // garantindo que o que o frontend enviar seja salvo. ***
             itens: order.map(item => ({
                 // Mantém a estrutura interna dos itens como antes
                 category: item.category || null,
@@ -516,8 +525,9 @@ export default async function handler(req, res) {
                 name: item.name || 'Item sem nome',
                 price: Number(item.price || 0),
                 type: item.type || 'full',
+                // Salva 'ingredients' se existir (Hambúrguer ou Pizza vindo do frontend novo)
                 ...(item.ingredients && { ingredients: item.ingredients.map(ing => ({ name: ing.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1) })) }),
-                // CORRIGIDO: Bug no salvamento de extras (usava ing.price)
+                // Salva 'extras' se existir (Fallback ou se o frontend enviar ambos)
                 ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ext.price || 0), quantity: Number(ext.quantity || 1), placement: ext.placement })) }),
                 ...(item.originalItem && { originalItem: item.originalItem }),
                 ...(item.selected_slices && { selected_slices: item.selected_slices }),
