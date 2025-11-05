@@ -275,25 +275,27 @@ function formatOrderMessage(data) {
                     itemName = itemName.replace(`${item.selected_slices} FATIAS: `, '');
                 }
 
-                // --- INÍCIO DA NOVA LÓGICA DE PREÇO ---
-                const finalPrice = item.price || 0; // Preço total do item (com adicionais)
-                let basePrice = item.basePrice; // Preço base (sem adicionais)
-                
-                // Se basePrice não foi fornecido (null, undefined), usa o finalPrice como base.
-                if (basePrice === undefined || basePrice === null) {
+                // --- INÍCIO DA LÓGICA DE PREÇO CORRIGIDA ---
+                const finalPrice = item.price || 0; // Preço total do item (com adicionais/ingredients)
+                let basePrice;
+
+                if (item.type === 'custom_burger') {
+                    // Burger montável pode ter basePrice 0
+                    basePrice = item.basePrice || 0; 
+                } else if (item.basePrice !== undefined && item.basePrice !== null) {
+                    // Usa o basePrice se ele foi enviado
+                    basePrice = item.basePrice; 
+                } else {
+                    // Fallback: Se basePrice não veio, usa o finalPrice
+                    // Este é o caso que o usuário reportou (Meia Banana...: R$ 112,50)
                     basePrice = finalPrice;
                 }
-                
-                // Caso especial: custom_burger usa basePrice (que pode ser 0)
-                if (item.type === 'custom_burger') {
-                    basePrice = item.basePrice || 0; 
-                }
-                // --- FIM DA NOVA LÓGICA DE PREÇO ---
+                // --- FIM DA LÓGICA DE PREÇO ---
 
 
                 // Formatação condicional por tipo de item
                 if (item.type === 'custom_burger') {
-                    // Formato Burger Montável
+                    // Formato Burger Montável (Usa 'ingredients')
                     message.push(`  • ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
                     if (item.ingredients && item.ingredients.length > 0) {
                         item.ingredients.forEach(ing => {
@@ -307,29 +309,47 @@ function formatOrderMessage(data) {
                     }
                 
                 } else if (item.selected_slices) {
-                    // Formato Pizza
-                    // Mostra o preço base (que pode ser o preço final se basePrice não foi enviado)
+                    // Formato Pizza (Usa 'extras')
                     message.push(`  • *${item.selected_slices} FATIAS:* ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
+
+                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO) ---
+                    if (item.extras && item.extras.length > 0) {
+                         item.extras.forEach(extra => {
+                            const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
+                            const extraPrice = (extra.price || 0) * (extra.quantity || 1);
+                            // CORRIGIDO: Removido "Adicional "
+                            message.push(`     + _${extra.name} (${extra.placement})${extraQty}: ${formatCurrency(extraPrice)}_`);
+                         });
+                         
+                         // Só mostra se o preço final (com extras) for MAIOR que o preço base
+                         if (finalPrice > basePrice) {
+                             message.push(`        *Total C/ Adicionais: ${formatCurrency(finalPrice)}*`);
+                         }
+                    }
+                    // --- FIM BLOCO DE EXTRAS ---
                 
                 } else {
-                    // Formato Item Normal (Entradas, Bebidas, etc)
+                    // Formato Item Normal (Entradas, Bebidas, etc) (Usa 'extras')
                     message.push(`  • ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
+                    
+                    // --- INÍCIO BLOCO DE EXTRAS (MOVIDO) ---
+                    if (item.extras && item.extras.length > 0) {
+                         item.extras.forEach(extra => {
+                            const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
+                            const extraPrice = (extra.price || 0) * (extra.quantity || 1);
+                            // CORRIGIDO: Removido "Adicional "
+                            message.push(`     + _${extra.name} (${extra.placement})${extraQty}: ${formatCurrency(extraPrice)}_`);
+                         });
+                         
+                         // Só mostra se o preço final (com extras) for MAIOR que o preço base
+                         if (finalPrice > basePrice) {
+                             message.push(`        *Total C/ Adicionais: ${formatCurrency(finalPrice)}*`);
+                         }
+                    }
+                    // --- FIM BLOCO DE EXTRAS ---
                 }
 
-                // Adicionais (Extras) - (Burger montável não entra aqui)
-                if (item.extras && item.extras.length > 0) {
-                     item.extras.forEach(extra => {
-                        const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
-                        const extraPrice = (extra.price || 0) * (extra.quantity || 1);
-                        message.push(`     + _Adicional ${extra.name} (${extra.placement})${extraQty}: ${formatCurrency(extraPrice)}_`);
-                     });
-                     
-                     // ADICIONADO: Total C/ Adicionais
-                     // Só mostra se o preço final (com extras) for MAIOR que o preço base
-                     if (finalPrice > basePrice) {
-                         message.push(`        *Total C/ Adicionais: ${formatCurrency(finalPrice)}*`);
-                     }
-                }
+                // Bloco de extras que estava aqui (linhas 386-397 originais) foi REMOVIDO.
             });
             categoriesProcessed++;
         }
@@ -497,7 +517,8 @@ export default async function handler(req, res) {
                 price: Number(item.price || 0),
                 type: item.type || 'full',
                 ...(item.ingredients && { ingredients: item.ingredients.map(ing => ({ name: ing.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1) })) }),
-                ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ing.price || 0), quantity: Number(ing.quantity || 1), placement: ext.placement })) }),
+                // CORRIGIDO: Bug no salvamento de extras (usava ing.price)
+                ...(item.extras && { extras: item.extras.map(ext => ({ name: ext.name, price: Number(ext.price || 0), quantity: Number(ext.quantity || 1), placement: ext.placement })) }),
                 ...(item.originalItem && { originalItem: item.originalItem }),
                 ...(item.selected_slices && { selected_slices: item.selected_slices }),
                 ...(item.firstHalfData && { firstHalfData: item.firstHalfData }),
