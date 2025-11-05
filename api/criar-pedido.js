@@ -278,19 +278,27 @@ function formatOrderMessage(data) {
                     itemName = itemName.replace(`${item.selected_slices} FATIAS: `, '');
                 }
 
-                // --- INÍCIO DA LÓGICA DE PREÇO CORRIGIDA ---
+                // --- INÍCIO DA LÓGICA DE PREÇO CORRIGIDA (AGORA CALCULA O BASEPRICE) ---
                 const finalPrice = item.price || 0; // Preço total do item (com adicionais/ingredients)
                 let basePrice;
+                const additions = item.ingredients || item.extras; // Pega a lista de adicionais
 
                 if (item.type === 'custom_burger') {
-                    // Burger montável pode ter basePrice 0
+                    // Burger montável já envia basePrice correto (ou 0)
                     basePrice = item.basePrice || 0; 
                 } else if (item.basePrice !== undefined && item.basePrice !== null) {
-                    // Usa o basePrice se ele foi enviado
+                    // Usa o basePrice se ele foi enviado explicitamente
                     basePrice = item.basePrice; 
+                } else if (additions && additions.length > 0) {
+                    // *** NOVA LÓGICA: CALCULA O basePrice A PARTIR DOS ADICIONAIS ***
+                    let additionsTotal = 0;
+                    additions.forEach(extra => {
+                        additionsTotal += (extra.price || 0) * (extra.quantity || 1);
+                    });
+                    // O preço base é o preço final MENOS o total dos adicionais
+                    basePrice = finalPrice - additionsTotal;
                 } else {
-                    // Fallback: Se basePrice não veio, usa o finalPrice
-                    // Este é o caso que o usuário reportou (Meia Banana...: R$ 112,50)
+                    // Fallback: Se não tem basePrice E não tem adicionais, o preço base é o preço final
                     basePrice = finalPrice;
                 }
                 // --- FIM DA LÓGICA DE PREÇO ---
@@ -317,7 +325,7 @@ function formatOrderMessage(data) {
 
                     // --- INÍCIO BLOCO DE EXTRAS (MOVIDO E CORRIGIDO) ---
                     // *** CORREÇÃO: Procura por 'item.ingredients' (do frontend) OU 'item.extras' (fallback) ***
-                    const additions = item.ingredients || item.extras; 
+                    // const additions = item.ingredients || item.extras;  // Já definido acima
                     if (additions && additions.length > 0) {
                          additions.forEach(extra => { // Itera sobre a variável correta
                             const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
@@ -339,7 +347,7 @@ function formatOrderMessage(data) {
                     
                     // --- INÍCIO BLOCO DE EXTRAS (MOVIDO E CORRIGIDO) ---
                      // *** CORREÇÃO: Procura por 'item.ingredients' (do frontend) OU 'item.extras' (fallback) ***
-                    const additions = item.ingredients || item.extras;
+                    // const additions = item.ingredients || item.extras; // Já definido acima
                     if (additions && additions.length > 0) {
                          additions.forEach(extra => { // Itera sobre a variável correta
                             const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
