@@ -86,7 +86,7 @@ if (getApps().length === 0) {
 }
 // --- FIM DA INICIALIZAÇÃO ---
 
-// --- FUNÇÕES HELPER ---
+// --- FUNÇÕES HELPER (Sem alteração) ---
 const createSubItemString = (subItems) => {
   if (!Array.isArray(subItems) || subItems.length === 0) return '';
   try {
@@ -127,7 +127,7 @@ function generateOrderId() {
     return `${datePart}-${timePart}-${randomPart}`;
 }
 
-// --- NOVAS FUNÇÕES HELPER PARA FORMATAÇÃO DA MENSAGEM ---
+// --- INÍCIO DAS FUNÇÕES HELPER MODIFICADAS ---
 
 /**
  * Formata um valor numérico para o padrão BRL (R$ XX,XX).
@@ -140,29 +140,40 @@ function formatCurrency(value) {
 }
 
 /**
- * Formata o método de pagamento para exibição.
+ * Formata o método de pagamento para exibição (MODIFICADO).
+ * Retorna um array de strings para o novo formato.
  * @param {string|object} payment - O método de pagamento.
- * @returns {string} - O método de pagamento formatado.
+ * @param {number} finalTotal - O total final do pedido para calcular o troco.
+ * @returns {string[]} - As linhas formatadas do método de pagamento.
  */
-function formatPaymentMethod(payment) {
+function formatPaymentMethod(payment, finalTotal) {
+    const lines = [];
     if (typeof payment === 'object' && payment !== null) {
         if (payment.method === 'Dinheiro') {
+            lines.push('Pagamento: *Dinheiro*');
             const trocoPara = Number(payment.trocoPara || 0);
             if (trocoPara > 0) {
-                return `*Dinheiro* (Troco para: ${formatCurrency(trocoPara)})`;
+                lines.push(`Troco para: *${formatCurrency(trocoPara)}*`);
+                if (trocoPara > finalTotal) {
+                    const troco = trocoPara - finalTotal;
+                    lines.push(`Troco: *${formatCurrency(troco)}*`);
+                }
             }
-            return '*Dinheiro* (Sem troco / Pagamento exato)';
+            return lines;
         }
     }
+    // Para Cartão, Pix, etc. (string)
     if (typeof payment === 'string') {
-         return `*${payment}*`; // Para Cartão, Pix, etc.
+         lines.push(`Pagamento: *${payment}*`);
+         return lines;
     }
     // Fallback
-    return `*${String(payment)}*`;
+    lines.push(`Pagamento: *${String(payment)}*`);
+    return lines;
 }
 
 /**
- * Gera a string completa da mensagem do pedido para o WhatsApp.
+ * Gera a string completa da mensagem do pedido para o WhatsApp (MODIFICADO).
  * @param {object} data - O corpo da requisição (req.body).
  * @returns {string} - A mensagem formatada e codificada para URL.
  */
@@ -178,13 +189,18 @@ function formatOrderMessage(data) {
     message.push(`*Cliente:* ${selectedAddress.clientName || 'Não informado'}`);
 
     let addressLine = '*Endereço:* ';
-    // O frontend já ajusta o 'bairro' para 'Retirada'
     if (selectedAddress.bairro === 'Retirada') {
         addressLine += 'Retirada no Balcão, S/N - Retirada';
     } else {
         addressLine += `${selectedAddress.rua || 'Rua não informada'}, ${selectedAddress.numero || 'S/N'} - ${selectedAddress.bairro || 'Bairro não informado'}`;
     }
     message.push(addressLine);
+
+    // ADICIONADO: Referência
+    if (selectedAddress.referencia && selectedAddress.referencia.trim() !== '') {
+        message.push(`*Referência:* ${selectedAddress.referencia.trim()}`);
+    }
+
     message.push('');
     message.push('*------------------------------------*');
     message.push('*PEDIDO:*');
@@ -200,17 +216,25 @@ function formatOrderMessage(data) {
             // Normaliza o nome da categoria para garantir consistência
             category = item.category.toUpperCase().replace(/\(S\)/gi, '(s)');
         }
+        
+        // NOVO: Lógica para categoria "MEIA A MEIA"
+        // Se a categoria for de pizza e o nome sugerir meia/meia
+        if (category.includes('PIZZA') && (item.name.toLowerCase().includes('meia ') || item.name.includes('&')) && item.type !== 'promotion') {
+             category = 'PIZZA(S) MEIA A MEIA';
+        }
+
         if (!itemsByCategory[category]) {
             itemsByCategory[category] = [];
         }
         itemsByCategory[category].push(item);
     });
 
-    // --- ORDEM DE EXIBIÇÃO DAS CATEGORIAS (para seguir o template) ---
+    // --- ORDEM DE EXIBIÇÃO DAS CATEGORIAS (com MEIA A MEIA) ---
     const categoryOrder = [
         'ENTRADAS',
         'PIZZA(S) DOCES',
         'PIZZA(S) TRADICIONAIS',
+        'PIZZA(S) MEIA A MEIA', // ADICIONADO
         'PIZZA(S) PROMOCIONAIS',
         'BEBIDAS',
         'BURGER',
@@ -226,19 +250,22 @@ function formatOrderMessage(data) {
         }
     }
     
-    let categoriesProcessed = 0; // Para controlar o separador
+    let categoriesProcessed = 0; // Para controlar o separador final
 
     // --- RENDERIZAR ITENS POR CATEGORIA ---
     allCategoriesInOrder.forEach(category => {
         if (itemsByCategory[category]) {
             
-            // Adiciona separador ANTES da categoria (se não for a primeira)
-            if (categoriesProcessed > 0) {
-                 message.push('------------------------------------');
-            }
+            // REMOVIDO: Separador antes da categoria
 
             message.push(`*> ${category} <*`);
-            itemsByCategory[category].forEach(item => {
+            itemsByCategory[category].forEach((item, index) => {
+                
+                // ADICIONADO: Separador ENTRE itens (se não for o primeiro)
+                if (index > 0) {
+                     message.push('------------------------------------');
+                }
+                
                 const quantity = item.quantity || 1;
                 const quantityText = quantity > 1 ? ` (x${quantity})` : '';
                 
@@ -248,10 +275,26 @@ function formatOrderMessage(data) {
                     itemName = itemName.replace(`${item.selected_slices} FATIAS: `, '');
                 }
 
+                // --- INÍCIO DA NOVA LÓGICA DE PREÇO ---
+                const finalPrice = item.price || 0; // Preço total do item (com adicionais)
+                let basePrice = item.basePrice; // Preço base (sem adicionais)
+                
+                // Se basePrice não foi fornecido (null, undefined), usa o finalPrice como base.
+                if (basePrice === undefined || basePrice === null) {
+                    basePrice = finalPrice;
+                }
+                
+                // Caso especial: custom_burger usa basePrice (que pode ser 0)
+                if (item.type === 'custom_burger') {
+                    basePrice = item.basePrice || 0; 
+                }
+                // --- FIM DA NOVA LÓGICA DE PREÇO ---
+
+
                 // Formatação condicional por tipo de item
                 if (item.type === 'custom_burger') {
                     // Formato Burger Montável
-                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(item.basePrice || 0)}`);
+                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
                     if (item.ingredients && item.ingredients.length > 0) {
                         item.ingredients.forEach(ing => {
                             const ingQuantity = ing.quantity || 1;
@@ -259,29 +302,33 @@ function formatOrderMessage(data) {
                             const ingPrice = (ing.price || 0) * ingQuantity;
                             message.push(`     + _${ing.name}${ingQuantityText}: ${formatCurrency(ingPrice)}_`);
                         });
+                        // Mostra o total final (item.price)
+                        message.push(`        *Total C/ Ingredientes: ${formatCurrency(finalPrice)}*`);
                     }
-                    message.push(`        *Total C/ Ingredientes: ${formatCurrency(item.price)}*`);
                 
                 } else if (item.selected_slices) {
                     // Formato Pizza
-                    message.push(`  • *${item.selected_slices} FATIAS:* ${itemName}${quantityText}: ${formatCurrency(item.price)}`);
+                    // Mostra o preço base (que pode ser o preço final se basePrice não foi enviado)
+                    message.push(`  • *${item.selected_slices} FATIAS:* ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
                 
-                } else if (item.type === 'promotion') {
-                    // Formato Promoção
-                    message.push(`  • ${itemName}${quantityText} (Promo): ${formatCurrency(item.price)}`);
-
                 } else {
-                    // Formato Item Normal
-                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(item.price)}`);
+                    // Formato Item Normal (Entradas, Bebidas, etc)
+                    message.push(`  • ${itemName}${quantityText}: ${formatCurrency(basePrice)}`);
                 }
 
-                // Adicionais (Extras) para pizzas (e outros itens, se houver)
+                // Adicionais (Extras) - (Burger montável não entra aqui)
                 if (item.extras && item.extras.length > 0) {
                      item.extras.forEach(extra => {
                         const extraQty = extra.quantity > 1 ? ` (x${extra.quantity})` : '';
                         const extraPrice = (extra.price || 0) * (extra.quantity || 1);
                         message.push(`     + _Adicional ${extra.name} (${extra.placement})${extraQty}: ${formatCurrency(extraPrice)}_`);
                      });
+                     
+                     // ADICIONADO: Total C/ Adicionais
+                     // Só mostra se o preço final (com extras) for MAIOR que o preço base
+                     if (finalPrice > basePrice) {
+                         message.push(`        *Total C/ Adicionais: ${formatCurrency(finalPrice)}*`);
+                     }
                 }
             });
             categoriesProcessed++;
@@ -289,18 +336,25 @@ function formatOrderMessage(data) {
     });
 
     // --- TOTAIS ---
-    message.push('------------------------------------');
+    // ADICIONADO: Separador final antes dos totais
+    if (categoriesProcessed > 0) {
+        message.push('------------------------------------');
+    }
+
     message.push(`Subtotal: ${formatCurrency(total.subtotal)}`);
     if (total.discount > 0) {
         message.push(`Desconto: - ${formatCurrency(total.discount)}`);
     }
 
-    // Adiciona taxa de entrega (mesmo R$ 0,00) conforme template
     message.push(`Taxa de Entrega: ${formatCurrency(total.deliveryFee)}`);
     
     message.push(`*Total: ${formatCurrency(total.finalTotal)}*`);
-    message.push(`Pagamento: ${formatPaymentMethod(paymentMethod)}`);
-    message.push('');
+    
+    // ATUALIZADO: Lógica de Pagamento
+    const paymentLines = formatPaymentMethod(paymentMethod, total.finalTotal);
+    message.push(...paymentLines); // Adiciona as linhas (já formatadas)
+    
+    message.push(''); // Linha em branco
 
     // --- OBSERVAÇÕES ---
     if (observation && observation.trim() !== '') {
@@ -312,10 +366,11 @@ function formatOrderMessage(data) {
     return encodeURIComponent(message.join('\n'));
 }
 
-// --- FIM DAS NOVAS FUNÇÕES HELPER ---
+
+// --- FIM DAS FUNÇÕES HELPER MODIFICADAS ---
 
 
-// --- HANDLER PRINCIPAL DA API ---
+// --- HANDLER PRINCIPAL DA API (Sem alteração na lógica interna) ---
 export default async function handler(req, res) {
     log(`--- Requisição recebida para /api/criar-pedido em ${new Date().toISOString()} ---`);
     if (req.method !== 'POST') {
@@ -447,7 +502,7 @@ export default async function handler(req, res) {
                 ...(item.selected_slices && { selected_slices: item.selected_slices }),
                 ...(item.firstHalfData && { firstHalfData: item.firstHalfData }),
                 ...(item.secondHalfData && { secondHalfData: item.secondHalfData }),
-                ...(item.basePrice !== undefined && { basePrice: Number(item.basePrice) }),
+                ...(item.basePrice !== undefined && { basePrice: Number(item.basePrice) }), // basePrice é salvo aqui
                 quantity: Number(item.quantity || 1)
             })),
             observacao: observation || "",
@@ -506,4 +561,3 @@ export default async function handler(req, res) {
         log(`--- Requisição finalizada para /api/criar-pedido em ${new Date().toISOString()} ---`);
     }
 }
-
