@@ -1275,14 +1275,14 @@ const firebaseConfig = {
             // ========================================================================
             // -->
             let itemsHtml = orderItems.map(item => {
-                let itemDetails = '';
+            let itemDetails = '';
                 
                 // 1. Pega adicionais (pizzas/itens) do Balcão
                 if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                     item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                     });
                     itemDetails += '</ul>';
@@ -1300,11 +1300,11 @@ const firebaseConfig = {
                         itemDetails += '</ul>';
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes (que são os extras do cardápio online)
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
                             itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                         });
                         itemDetails += '</ul>';
@@ -1460,12 +1460,12 @@ const firebaseConfig = {
              let itemsHtml = orderItems.map(item => {
                 let itemDetails = '';
                 
-                // 1. Pega adicionais (pizzas/itens) do Balcão
+// 1. Pega adicionais (pizzas/itens) do Balcão
                 if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                     item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : '';
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                     });
                     itemDetails += '</ul>';
@@ -1483,11 +1483,11 @@ const firebaseConfig = {
                         itemDetails += '</ul>';
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
                             itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                         });
                         itemDetails += '</ul>';
@@ -1930,11 +1930,11 @@ const firebaseConfig = {
                 
                 // --- INÍCIO DA CORREÇÃO ---
         
-                // 1. Adicionais (pizzas/itens) do Balcão
+// 1. Adicionais (pizzas/itens) do Balcão
                 if (item.extras && item.extras.length > 0) {
                     itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
                         return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
                     }).join('')}</ul>`;
                 }
@@ -1949,15 +1949,14 @@ const firebaseConfig = {
                          }).join('')}</ul>`;
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
                         itemString += `<ul>${item.ingredients.map(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
+                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
                             return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
                         }).join('')}</ul>`;
                     }
                 }
-                
                 // --- FIM DA CORREÇÃO ---
                 
                 return itemString;
@@ -2788,11 +2787,11 @@ const firebaseConfig = {
                 // ========================================================================
                 // -->
                 
-                // 1. Pega adicionais (pizzas/itens) do Balcão
+// 1. Pega adicionais (pizzas/itens) do Balcão
                 if (item.extras && item.extras.length > 0) {
                     itemString += '\n' + item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : '';
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
                         return `    *+ ${extra.name}${quantityText}${placementText}*`;
                     }).join('\n');
                 }
@@ -2807,10 +2806,10 @@ const firebaseConfig = {
                          }).join('\n');
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
                         itemString += '\n' + item.ingredients.map(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
                             return `    *+ ${extra.name}${quantityText}${placementText}*`;
                         }).join('\n');
                     }
