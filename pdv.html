@@ -1270,6 +1270,7 @@ const firebaseConfig = {
             //
             // Lógica atualizada para ler 'item.extras' (do balcão) E
             // 'item.ingredients' (do cardápio online) para mostrar os adicionais.
+            // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
             //
             // ========================================================================
             // -->
@@ -1299,16 +1300,14 @@ const firebaseConfig = {
                         itemDetails += '</ul>';
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
-                        if (!item.extras || item.extras.length === 0) { 
-                            itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                            item.ingredients.forEach(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                const placementText = extra.placement ? ` (${extra.placement})` : '';
-                                itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
-                            });
-                            itemDetails += '</ul>';
-                        }
+                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+                        itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                        item.ingredients.forEach(extra => {
+                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                        });
+                        itemDetails += '</ul>';
                     }
                 }
 
@@ -1484,16 +1483,14 @@ const firebaseConfig = {
                         itemDetails += '</ul>';
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
-                        if (!item.extras || item.extras.length === 0) {
-                            itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                            item.ingredients.forEach(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                const placementText = extra.placement ? ` (${extra.placement})` : '';
-                                itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
-                            });
-                            itemDetails += '</ul>';
-                        }
+                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+                        itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                        item.ingredients.forEach(extra => {
+                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                        });
+                        itemDetails += '</ul>';
                     }
                 }
 
@@ -1874,6 +1871,7 @@ const firebaseConfig = {
         //
         // Lógica da função generateItemHtml atualizada para ler
         // 'item.extras' (Balcão) E 'item.ingredients' (Cardápio Online)
+        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
         //
         // ========================================================================
         // -->
@@ -1951,14 +1949,12 @@ const firebaseConfig = {
                          }).join('')}</ul>`;
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
-                        if (!item.extras || item.extras.length === 0) {
-                            itemString += `<ul>${item.ingredients.map(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
-                                return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
-                            }).join('')}</ul>`;
-                        }
+                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+                        itemString += `<ul>${item.ingredients.map(extra => {
+                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
+                            return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
+                        }).join('')}</ul>`;
                     }
                 }
                 
@@ -2787,7 +2783,7 @@ const firebaseConfig = {
                 // ========================================================================
                 //
                 // Aplicada a mesma lógica de 'extras' e 'ingredients' para a
-                // mensagem do WhatsApp.
+                // mensagem do WhatsApp. A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
                 //
                 // ========================================================================
                 // -->
@@ -2811,14 +2807,12 @@ const firebaseConfig = {
                          }).join('\n');
                     } else {
                         // Trata como adicionais de pizza (adições) - do Cardápio Online
-                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
-                        if (!item.extras || item.extras.length === 0) {
-                            itemString += '\n' + item.ingredients.map(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                const placementText = extra.placement ? ` (${extra.placement})` : '';
-                                return `    *+ ${extra.name}${quantityText}${placementText}*`;
-                            }).join('\n');
-                        }
+                        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+                        itemString += '\n' + item.ingredients.map(extra => {
+                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                            const placementText = extra.placement ? ` (${extra.placement})` : '';
+                            return `    *+ ${extra.name}${quantityText}${placementText}*`;
+                        }).join('\n');
                     }
                 }
                 // <!--
