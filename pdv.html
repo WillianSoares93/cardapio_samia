@@ -595,7 +595,6 @@ const firebaseConfig = {
                 }
             }
         }
-
         openCashForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const initialValue = parseFloat(document.getElementById('initial-value').value);
@@ -1265,7 +1264,7 @@ const firebaseConfig = {
 
             // <!--
             // ========================================================================
-            // INÍCIO DA ALTERAÇÃO - createOrderCard
+            // INÍCIO DA ALTERAÇÃO - createOrderCard (PDV Card Display)
             // ========================================================================
             //
             // Lógica atualizada para ler 'item.extras' (do balcão) E
@@ -1303,8 +1302,8 @@ const firebaseConfig = {
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
-                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // <-- CORREÇÃO: Lê o placement aqui
+                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`; // <-- CORREÇÃO: Adiciona o placementText
                         });
                         itemDetails += '</ul>';
                     }
@@ -1446,7 +1445,7 @@ const firebaseConfig = {
 
             // <!--
             // ========================================================================
-            // INÍCIO DA ALTERAÇÃO - createDetailedOrderCardHtml
+            // INÍCIO DA ALTERAÇÃO - createDetailedOrderCardHtml (Modal Detalhes da Mesa)
             // ========================================================================
             //
             // Lógica atualizada para ler 'item.extras' (do balcão) E
@@ -1485,8 +1484,8 @@ const firebaseConfig = {
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
-                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // <-- CORREÇÃO: Lê o placement aqui
+                            itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`; // <-- CORREÇÃO: Adiciona o placementText
                         });
                         itemDetails += '</ul>';
                     }
@@ -1868,8 +1867,8 @@ const firebaseConfig = {
         // ========================================================================
         //
         // Lógica da função generateItemHtml atualizada para ler
-        // 1. 'item.extras' (Balcão E Cardápio Online)
-        // 2. 'item.ingredients' APENAS se for 'custom_burger'
+        // 1. 'item.extras' (Balcão)
+        // 2. 'item.ingredients' (Cardápio Online), verificando se é burger ou pizza.
         //
         // ========================================================================
         // -->
@@ -1928,7 +1927,7 @@ const firebaseConfig = {
                 
                 // --- INÍCIO DA CORREÇÃO ---
         
-                // 1. Adicionais (pizzas/itens) do Balcão E Cardápio Online (campo 'extras')
+                // 1. Adicionais (pizzas/itens) do Balcão (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
@@ -1937,15 +1936,24 @@ const firebaseConfig = {
                     }).join('')}</ul>`;
                 }
                 
-                // 2. Ingredientes (APENAS Burger Custom)
-                if (item.ingredients && item.ingredients.length > 0 && item.type === 'custom_burger') {
-                     // Trata como ingredientes de hambúrguer (remoções)
-                     itemString += `<ul>${item.ingredients.map(ing => {
-                         const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                         return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
-                     }).join('')}</ul>`;
+                // 2. Ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
+                if (item.ingredients && item.ingredients.length > 0) {
+                    if (item.type === 'custom_burger') {
+                         // Trata como ingredientes de hambúrguer (remoções)
+                         itemString += `<ul>${item.ingredients.map(ing => {
+                             const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                             return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
+                         }).join('')}</ul>`;
+                    } else {
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        itemString += `<ul>${item.ingredients.map(extra => {
+                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                            // AQUI ESTÁ A CORREÇÃO: Lemos o 'placement' do array 'ingredients'
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; 
+                            return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
+                        }).join('')}</ul>`;
+                    }
                 }
-                
                 // --- FIM DA CORREÇÃO ---
                 
                 return itemString;
