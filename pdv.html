@@ -1819,8 +1819,8 @@ const firebaseConfig = {
                 }
                 
                 // Adicionais (Extras)
-                if (item.ingredients && item.ingredients.length > 0) {
-                    itemString += `<ul>${item.ingredients.map(extra => {
+                if (item.extras && item.extras.length > 0) {
+                    itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
                         return `<li class="item-details"><strong>+ ${extra.name}${quantityText} (${extra.placement})</strong></li>`;
                     }).join('')}</ul>`;
