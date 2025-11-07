@@ -1758,12 +1758,8 @@ const firebaseConfig = {
         // INÍCIO DA ALTERAÇÃO - Função printOrderContent
         // ========================================================================
         //
-        // Eu reescrevi esta função para:
-        // 1. Diferenciar claramente a comanda da cozinha (sem telefone, sem preços)
-        //    mas MANTENDO o agrupamento por categoria.
-        // 2. Garantir que os 'extras' (adicionais) e 'ingredients' (de hambúrgueres)
-        //    sejam exibidos de forma clara em AMBAS as comandas.
-        // 3. Garantir que o CSS @page { size: 80mm auto; } cuide da impressão "contínua".
+        // CSS de impressão ajustado para forçar o layout de rolo contínuo (80mm)
+        // e evitar a paginação do navegador (estilo A4).
         //
         // ========================================================================
         // -->
@@ -1771,15 +1767,21 @@ const firebaseConfig = {
             const styles = `
                 <style>
                     @media print {
-                        @page { margin: 0; size: 80mm auto; } /* Define o tamanho contínuo */
-                        body {
-                            width: 80mm;
+                        @page { 
+                            margin: 0; 
+                            size: 80mm auto; /* Tenta forçar o tamanho do papel */
+                        } 
+                        html, body {
+                            width: 80mm !important; /* Largura da impressora térmica */
+                            height: auto !important; /* Altura automática para conteúdo contínuo */
+                            min-height: initial !important; /* Reseta min-height */
                             margin: 0;
-                            padding: 5mm;
+                            padding: 5mm; /* Margem interna do papel */
                             font-family: 'Courier New', Courier, monospace;
                             font-size: 10pt;
                             color: #000;
                             background-color: #fff;
+                            overflow: visible !important; /* Garante que nada seja cortado */
                         }
                         * {
                             font-family: 'Courier New', Courier, monospace;
