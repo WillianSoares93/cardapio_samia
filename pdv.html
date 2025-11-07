@@ -1361,8 +1361,8 @@ const firebaseConfig = {
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-medium text-gray-500">Criado às ${new Date(createdAtTimestamp).toLocaleTimeString('pt-BR')}</span>
                                 <div class="flex items-center space-x-2">
-                                    <button data-id="${id}" class="print-btn text-gray-500" title="Imprimir Comanda Cozinha"><i class="fas fa-utensils"></i></button>
-                                    <button data-id="${id}" class="print-btn text-gray-500" title="Imprimir Recibo Cliente"><i class="fas fa-receipt"></i></button>
+                                    <button data-id="${id}" data-type="kitchen" class="print-btn text-gray-500" title="Imprimir Comanda Cozinha"><i class="fas fa-utensils"></i></button>
+                                    <button data-id="${id}" data-type="client" class="print-btn text-gray-500" title="Imprimir Recibo Cliente"><i class="fas fa-receipt"></i></button>
                                     ${hasPhone ? `<button data-id="${id}" class="whatsapp-btn text-green-500" title="Confirmar Pedido no WhatsApp"><i class="fab fa-whatsapp"></i></button>` : ''}
                                     <button class="archive-btn text-green-500 hover:text-green-700 ${!finalStep ? 'opacity-50 cursor-not-allowed' : ''}" data-id="${id}" ${!finalStep ? 'disabled' : ''} title="Finalizar e Arquivar Pedido"><i class="fas fa-check-circle"></i></button>
                                     <button data-id="${id}" class="manage-btn text-blue-500" title="Editar Pedido"><i class="fas fa-edit"></i></button>
@@ -1753,6 +1753,18 @@ const firebaseConfig = {
             printOrderContent(order, id, type);
         }
 
+        // <!--
+        // ========================================================================
+        // INÍCIO DA ALTERAÇÃO - Função printOrderContent
+        // ========================================================================
+        //
+        // Eu reescrevi esta função para:
+        // 1. Diferenciar claramente a comanda da cozinha (sem telefone, sem preços).
+        // 2. Garantir que os 'extras' (adicionais) e 'ingredients' (de hambúrgueres)
+        //    sejam exibidos de forma clara em AMBAS as comandas.
+        //
+        // ========================================================================
+        // -->
         function printOrderContent(order, id, type) {
             const styles = `
                 <style>
@@ -1778,6 +1790,8 @@ const firebaseConfig = {
                         li { margin-bottom: 2px; }
                         .item-line { display: flex; justify-content: space-between; }
                         .item-details { padding-left: 15px; font-size: 9pt; color: #333; }
+                        /* NOVO ESTILO: Adicionado para destacar adicionais/ingredientes */
+                        .item-details strong { font-size: 9pt; color: #000; } 
                         hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
                         .text-right { text-align: right; }
                         .font-bold { font-weight: bold; }
@@ -1795,35 +1809,49 @@ const firebaseConfig = {
                 return acc;
             }, {});
 
+            // Função helper para gerar o HTML de um item (para evitar repetição)
+            const generateItemHtml = (item, includePrice = false) => {
+                let itemString = '';
+                
+                if (includePrice) {
+                    itemString = `<li class="item-line"><span>${item.name || 'Item desconhecido'}</span><span>R$${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}</span></li>`;
+                } else {
+                    itemString = `<li><strong>1x</strong> ${item.name || 'Item desconhecido'}</li>`;
+                }
+                
+                // Adicionais (Extras)
+                if (item.extras && item.extras.length > 0) {
+                    itemString += `<ul>${item.extras.map(extra => {
+                        const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                        return `<li class="item-details"><strong>+ ${extra.name}${quantityText} (${extra.placement})</strong></li>`;
+                    }).join('')}</ul>`;
+                }
+                
+                // Ingredientes (Custom Burger)
+                if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
+                     itemString += `<ul>${item.ingredients.map(ing => {
+                         const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                         return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
+                     }).join('')}</ul>`;
+                }
+                return itemString;
+            };
+
+
             if (type === 'kitchen') {
                 let kitchenHtml = '';
                 for (const category in itemsByCategory) {
                     kitchenHtml += `<h2>${category.toUpperCase()}</h2><ul>`;
-                    kitchenHtml += itemsByCategory[category].map(item => {
-                        let itemString = `<li><strong>1x</strong> ${item.name || 'Item desconhecido'}</li>`; // Add fallback
-                        if (item.extras && item.extras.length > 0) {
-                            itemString += `<ul>${item.extras.map(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                return `<li class="item-details">+ ${extra.name}${quantityText} (${extra.placement})</li>`;
-                            }).join('')}</ul>`;
-                        }
-                        if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                             itemString += `<ul>${item.ingredients.map(ing => {
-                                 const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                                 return `<li class="item-details">- ${ing.name}${quantityText}</li>`;
-                             }).join('')}</ul>`;
-                        }
-                        return itemString;
-                    }).join('');
+                    kitchenHtml += itemsByCategory[category].map(item => generateItemHtml(item, false)).join('');
                     kitchenHtml += '</ul>';
                 }
 
-                // **CORREÇÃO:** Usar optional chaining para endereco
+                // **CORREÇÃO:** Usar optional chaining para endereco.
+                // Removido o telefone, mantido apenas cliente/mesa.
                 printContent = `
                     <h1>COMANDA COZINHA</h1>
                     <p><strong>Pedido:</strong> #${id.substring(0, 5)}</p>
                     <p><strong>Cliente:</strong> ${order?.endereco?.clientName || 'N/A'}</p>
-                    ${order?.endereco?.telefone ? `<p><strong>Contato:</strong> ${order.endereco.telefone}</p>` : ''}
                     <hr>
                     ${kitchenHtml}
                     ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
@@ -1832,23 +1860,8 @@ const firebaseConfig = {
                 let clientItemsHtml = '';
                 for (const category in itemsByCategory) {
                      clientItemsHtml += `<h2>${category.toUpperCase()}</h2><ul>`;
-                     clientItemsHtml += itemsByCategory[category].map(item => {
-                        let itemString = `<li class="item-line"><span>${item.name || 'Item desconhecido'}</span><span>R$${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}</span></li>`; // Add fallback
-                        if (item.extras && item.extras.length > 0) {
-                            itemString += `<ul>${item.extras.map(extra => {
-                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                                return `<li class="item-details">+ ${extra.name}${quantityText} (${extra.placement})</li>`;
-                            }).join('')}</ul>`;
-                        }
-                        if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                             itemString += `<ul>${item.ingredients.map(ing => {
-                                 const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                                 return `<li class="item-details">- ${ing.name}${quantityText}</li>`;
-                             }).join('')}</ul>`;
-                        }
-                        return itemString;
-                    }).join('');
-                    clientItemsHtml += '</ul>';
+                     clientItemsHtml += itemsByCategory[category].map(item => generateItemHtml(item, true)).join('');
+                     clientItemsHtml += '</ul>';
                 }
 
                 let paymentDetailsHtml = '';
@@ -1909,6 +1922,11 @@ const firebaseConfig = {
                 printFrame.contentWindow.print();
             }, 100);
         }
+        // <!--
+        // ========================================================================
+        // FIM DA ALTERAÇÃO
+        // ========================================================================
+        // -->
 
         async function openCloseCashModal() {
             if (!currentCashRegister) {
