@@ -1759,11 +1759,11 @@ const firebaseConfig = {
         // ========================================================================
         //
         // Eu reescrevi esta função para:
-        // 1. Diferenciar claramente a comanda da cozinha (sem telefone, sem preços).
+        // 1. Diferenciar claramente a comanda da cozinha (sem telefone, sem preços)
+        //    mas MANTENDO o agrupamento por categoria.
         // 2. Garantir que os 'extras' (adicionais) e 'ingredients' (de hambúrgueres)
         //    sejam exibidos de forma clara em AMBAS as comandas.
-        // 3. (NOVA ALTERAÇÃO) Remover o agrupamento por categorias da via da COZINHA
-        //    para suportar impressão térmica em cupom contínuo.
+        // 3. Garantir que o CSS @page { size: 80mm auto; } cuide da impressão "contínua".
         //
         // ========================================================================
         // -->
@@ -1771,7 +1771,7 @@ const firebaseConfig = {
             const styles = `
                 <style>
                     @media print {
-                        @page { margin: 0; size: 80mm auto; }
+                        @page { margin: 0; size: 80mm auto; } /* Define o tamanho contínuo */
                         body {
                             width: 80mm;
                             margin: 0;
@@ -1792,7 +1792,6 @@ const firebaseConfig = {
                         li { margin-bottom: 2px; }
                         .item-line { display: flex; justify-content: space-between; }
                         .item-details { padding-left: 15px; font-size: 9pt; color: #333; }
-                        /* NOVO ESTILO: Adicionado para destacar adicionais/ingredientes */
                         .item-details strong { font-size: 9pt; color: #000; } 
                         hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
                         .text-right { text-align: right; }
@@ -1802,7 +1801,7 @@ const firebaseConfig = {
             `;
 
             let printContent = '';
-            // **CORREÇÃO:** Garantir que order.itens seja um array
+            // Garantir que order.itens seja um array
             const orderItems = Array.isArray(order.itens) ? order.itens : [];
 
             // Função helper para gerar o HTML de um item (para evitar repetição)
@@ -1833,15 +1832,24 @@ const firebaseConfig = {
                 return itemString;
             };
 
+            // Agrupar itens por categoria para AMBAS as impressões
+            const itemsByCategory = orderItems.reduce((acc, item) => {
+                const category = item.category || 'Outros';
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(item);
+                return acc;
+            }, {});
+
 
             if (type === 'kitchen') {
-                // ALTERAÇÃO: Mapeia direto a lista de itens, sem agrupar por categoria
-                let kitchenHtml = '<ul>';
-                kitchenHtml += orderItems.map(item => generateItemHtml(item, false)).join('');
-                kitchenHtml += '</ul>';
+                // Lógica da Cozinha (COM categorias, SEM preços)
+                let kitchenHtml = '';
+                for (const category in itemsByCategory) {
+                    kitchenHtml += `<h2>${category.toUpperCase()}</h2><ul>`;
+                    kitchenHtml += itemsByCategory[category].map(item => generateItemHtml(item, false)).join(''); // false = sem preço
+                    kitchenHtml += '</ul>';
+                }
 
-                // **CORREÇÃO:** Usar optional chaining para endereco.
-                // Removido o telefone, mantido apenas cliente/mesa.
                 printContent = `
                     <h1>COMANDA COZINHA</h1>
                     <p><strong>Pedido:</strong> #${id.substring(0, 5)}</p>
@@ -1851,25 +1859,17 @@ const firebaseConfig = {
                     ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
                 `;
             } else { // type === 'client'
-                // Lógica do cliente mantida (agrupada por categoria)
-                const itemsByCategory = orderItems.reduce((acc, item) => {
-                    const category = item.category || 'Outros';
-                    if (!acc[category]) acc[category] = [];
-                    acc[category].push(item);
-                    return acc;
-                }, {});
-
+                // Lógica do Cliente (COM categorias, COM preços)
                 let clientItemsHtml = '';
                 for (const category in itemsByCategory) {
                      clientItemsHtml += `<h2>${category.toUpperCase()}</h2><ul>`;
-                     clientItemsHtml += itemsByCategory[category].map(item => generateItemHtml(item, true)).join('');
+                     clientItemsHtml += itemsByCategory[category].map(item => generateItemHtml(item, true)).join(''); // true = com preço
                      clientItemsHtml += '</ul>';
                 }
 
                 let paymentDetailsHtml = '';
                 if (order.pagamento) {
                     let paymentText = '', changeText = '';
-                     // **CORREÇÃO:** Usar optional chaining para order.total e finalTotal
                     const finalTotalValue = order?.total?.finalTotal ?? 0;
                     if (typeof order.pagamento === 'object' && order.pagamento.method === 'Dinheiro') {
                         paymentText = 'Dinheiro';
@@ -1882,7 +1882,6 @@ const firebaseConfig = {
                     paymentDetailsHtml = `<hr><p><strong>Pagamento: ${paymentText}</strong></p>${changeText}`;
                 }
 
-                // **CORREÇÃO:** Usar optional chaining para endereco e total
                 printContent = `
                     <h1>Sâmia Pizzaria</h1>
                     <p><strong>Pedido:</strong> #${id.substring(0, 5)}</p>
