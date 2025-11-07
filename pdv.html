@@ -1269,20 +1269,20 @@ const firebaseConfig = {
             // ========================================================================
             //
             // Lógica atualizada para ler 'item.extras' (do balcão) E
-            // 'item.ingredients' (do cardápio online) para mostrar os adicionais.
-            // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+            // 'item.ingredients' (do cardápio online) para mostrar os adicionais,
+            // garantindo que o 'placement' seja lido de AMBOS.
             //
             // ========================================================================
             // -->
             let itemsHtml = orderItems.map(item => {
-            let itemDetails = '';
+                let itemDetails = '';
                 
-                // 1. Pega adicionais (pizzas/itens) do Balcão
+                // 1. Pega adicionais (pizzas/itens) do Balcão (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                     item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // Lê o placement
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                     });
                     itemDetails += '</ul>';
@@ -1299,12 +1299,11 @@ const firebaseConfig = {
                         });
                         itemDetails += '</ul>';
                     } else {
-                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online (campo 'ingredients')
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes (que são os extras do cardápio online)
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
                             itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                         });
                         itemDetails += '</ul>';
@@ -1460,12 +1459,12 @@ const firebaseConfig = {
              let itemsHtml = orderItems.map(item => {
                 let itemDetails = '';
                 
-// 1. Pega adicionais (pizzas/itens) do Balcão
+                // 1. Pega adicionais (pizzas/itens) do Balcão (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                     item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
+                        const placementText = extra.placement ? ` (${extra.placement})` : '';
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                     });
                     itemDetails += '</ul>';
@@ -1482,12 +1481,11 @@ const firebaseConfig = {
                         });
                         itemDetails += '</ul>';
                     } else {
-                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online (campo 'ingredients')
                         itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
                         item.ingredients.forEach(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
                             itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
                         });
                         itemDetails += '</ul>';
@@ -1870,8 +1868,8 @@ const firebaseConfig = {
         // ========================================================================
         //
         // Lógica da função generateItemHtml atualizada para ler
-        // 'item.extras' (Balcão) E 'item.ingredients' (Cardápio Online)
-        // A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+        // 'item.extras' (Balcão) E 'item.ingredients' (Cardápio Online),
+        // garantindo que o 'placement' seja lido de AMBOS.
         //
         // ========================================================================
         // -->
@@ -1930,11 +1928,11 @@ const firebaseConfig = {
                 
                 // --- INÍCIO DA CORREÇÃO ---
         
-// 1. Adicionais (pizzas/itens) do Balcão
+                // 1. Adicionais (pizzas/itens) do Balcão (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
+                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // Lê o placement
                         return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
                     }).join('')}</ul>`;
                 }
@@ -1948,15 +1946,15 @@ const firebaseConfig = {
                              return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
                          }).join('')}</ul>`;
                     } else {
-                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online (campo 'ingredients')
                         itemString += `<ul>${item.ingredients.map(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
                             return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
                         }).join('')}</ul>`;
                     }
                 }
+                
                 // --- FIM DA CORREÇÃO ---
                 
                 return itemString;
@@ -2782,16 +2780,16 @@ const firebaseConfig = {
                 // ========================================================================
                 //
                 // Aplicada a mesma lógica de 'extras' e 'ingredients' para a
-                // mensagem do WhatsApp. A CONDIÇÃO "if (!item.extras...)" FOI REMOVIDA
+                // mensagem do WhatsApp, garantindo que o 'placement' seja lido de AMBOS.
                 //
                 // ========================================================================
                 // -->
                 
-// 1. Pega adicionais (pizzas/itens) do Balcão
+                // 1. Pega adicionais (pizzas/itens) do Balcão (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemString += '\n' + item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                        const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORRETO
+                        const placementText = extra.placement ? ` (${extra.placement})` : '';
                         return `    *+ ${extra.name}${quantityText}${placementText}*`;
                     }).join('\n');
                 }
@@ -2805,11 +2803,10 @@ const firebaseConfig = {
                              return `    *- ${ing.name}${quantityText}*`;
                          }).join('\n');
                     } else {
-                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online (campo 'ingredients')
                         itemString += '\n' + item.ingredients.map(extra => {
                             const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            // CORREÇÃO: Lê 'extra.placement' dos ingredientes
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // << CORREÇÃO APLICADA
+                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
                             return `    *+ ${extra.name}${quantityText}${placementText}*`;
                         }).join('\n');
                     }
