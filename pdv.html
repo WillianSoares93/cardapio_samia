@@ -1758,8 +1758,10 @@ const firebaseConfig = {
         // INÍCIO DA ALTERAÇÃO - Função printOrderContent
         // ========================================================================
         //
-        // CSS de impressão ajustado para forçar o layout de rolo contínuo (80mm)
-        // e evitar a paginação do navegador (estilo A4).
+        // Mudei a lógica de impressão. Em vez de usar um iframe (que é instável
+        // e causa a paginação A4), agora abro uma nova janela (window.open),
+        // escrevo o HTML da comanda nela e chamo a impressão.
+        // Isso força o navegador a respeitar o CSS da impressora térmica.
         //
         // ========================================================================
         // -->
@@ -1904,26 +1906,42 @@ const firebaseConfig = {
                 `;
             }
 
-            let printFrame = document.getElementById('print-frame');
-            if (!printFrame) {
-                printFrame = document.createElement('iframe');
-                printFrame.id = 'print-frame';
-                printFrame.style.position = 'absolute';
-                printFrame.style.width = '0';
-                printFrame.style.height = '0';
-                printFrame.style.border = '0';
-                document.body.appendChild(printFrame);
+            // NOVA LÓGICA DE IMPRESSÃO (Substitui o iframe)
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            if (!printWindow) {
+                showCustomAlert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
+                return;
             }
+            
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Imprimir Pedido ${id.substring(0, 5)}</title>
+                        ${styles}
+                    </head>
+                    <body>
+                        ${printContent}
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+            // Espera o conteúdo ser totalmente carregado na nova janela
+            printWindow.onload = function() {
+                printWindow.focus(); // Foca na janela
+                printWindow.print(); // Abre a caixa de diálogo de impressão
+                printWindow.close(); // Fecha a janela após imprimir (ou cancelar)
+            };
 
-            const frameDoc = printFrame.contentWindow.document;
-            frameDoc.open();
-            frameDoc.write(styles + printContent);
-            frameDoc.close();
-
+            // Fallback caso o onload não dispare (comum em alguns navegadores)
             setTimeout(() => {
-                printFrame.contentWindow.focus();
-                printFrame.contentWindow.print();
-            }, 100);
+                if (!printWindow.closed) {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                }
+            }, 500);
         }
         // <!--
         // ========================================================================
@@ -2080,26 +2098,40 @@ const firebaseConfig = {
                 <div class="line font-bold"><span>DIFERENÇA:</span><span>${difference}</span></div>
             `;
 
-            let printFrame = document.getElementById('print-frame');
-            if (!printFrame) {
-                printFrame = document.createElement('iframe');
-                printFrame.id = 'print-frame';
-                printFrame.style.position = 'absolute';
-                printFrame.style.width = '0';
-                printFrame.style.height = '0';
-                printFrame.style.border = '0';
-                document.body.appendChild(printFrame);
+            // Usa a mesma lógica de janela pop-up para a impressão do caixa
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            if (!printWindow) {
+                showCustomAlert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
+                return;
             }
-
-            const frameDoc = printFrame.contentWindow.document;
-            frameDoc.open();
-            frameDoc.write(styles + printContent);
-            frameDoc.close();
+            
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Fechamento de Caixa</title>
+                        ${styles}
+                    </head>
+                    <body>
+                        ${printContent}
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+            printWindow.onload = function() {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            };
 
             setTimeout(() => {
-                printFrame.contentWindow.focus();
-                printFrame.contentWindow.print();
-            }, 100);
+                if (!printWindow.closed) {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                }
+            }, 500);
         }
 
         document.querySelector('main').addEventListener('click', function(e) {
