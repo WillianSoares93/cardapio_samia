@@ -1868,8 +1868,8 @@ const firebaseConfig = {
         // ========================================================================
         //
         // Lógica da função generateItemHtml atualizada para ler
-        // 'item.extras' (Balcão) E 'item.ingredients' (Cardápio Online),
-        // garantindo que o 'placement' seja lido de AMBOS.
+        // 1. 'item.extras' (Balcão E Cardápio Online)
+        // 2. 'item.ingredients' APENAS se for 'custom_burger'
         //
         // ========================================================================
         // -->
@@ -1928,7 +1928,7 @@ const firebaseConfig = {
                 
                 // --- INÍCIO DA CORREÇÃO ---
         
-                // 1. Adicionais (pizzas/itens) do Balcão (campo 'extras')
+                // 1. Adicionais (pizzas/itens) do Balcão E Cardápio Online (campo 'extras')
                 if (item.extras && item.extras.length > 0) {
                     itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
@@ -1937,22 +1937,13 @@ const firebaseConfig = {
                     }).join('')}</ul>`;
                 }
                 
-                // 2. Ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
-                if (item.ingredients && item.ingredients.length > 0) {
-                    if (item.type === 'custom_burger') {
-                         // Trata como ingredientes de hambúrguer (remoções)
-                         itemString += `<ul>${item.ingredients.map(ing => {
-                             const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                             return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
-                         }).join('')}</ul>`;
-                    } else {
-                        // Trata como adicionais de pizza (adições) - do Cardápio Online (campo 'ingredients')
-                        itemString += `<ul>${item.ingredients.map(extra => {
-                            const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
-                            const placementText = extra.placement ? ` (${extra.placement})` : ''; // CORREÇÃO: Lê o placement aqui também
-                            return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
-                        }).join('')}</ul>`;
-                    }
+                // 2. Ingredientes (APENAS Burger Custom)
+                if (item.ingredients && item.ingredients.length > 0 && item.type === 'custom_burger') {
+                     // Trata como ingredientes de hambúrguer (remoções)
+                     itemString += `<ul>${item.ingredients.map(ing => {
+                         const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                         return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
+                     }).join('')}</ul>`;
                 }
                 
                 // --- FIM DA CORREÇÃO ---
