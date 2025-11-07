@@ -1268,7 +1268,7 @@ const firebaseConfig = {
             // INÍCIO DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             //
-            // Lógica atualizada para ler 'item.extras' (do balcão) ou
+            // Lógica atualizada para ler 'item.extras' (do balcão) E
             // 'item.ingredients' (do cardápio online) para mostrar os adicionais.
             //
             // ========================================================================
@@ -1276,11 +1276,10 @@ const firebaseConfig = {
             let itemsHtml = orderItems.map(item => {
                 let itemDetails = '';
                 
-                // 1. Pega adicionais (Balcão usa 'extras', Cardápio online usa 'ingredients' para pizza)
-                const adicionais = item.extras || (item.ingredients && item.type !== 'custom_burger' ? item.ingredients : []);
-                if (adicionais && adicionais.length > 0) {
+                // 1. Pega adicionais (pizzas/itens) do Balcão
+                if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                    adicionais.forEach(extra => {
+                    item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
                         const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
@@ -1288,14 +1287,29 @@ const firebaseConfig = {
                     itemDetails += '</ul>';
                 }
 
-                // 2. Pega ingredientes (Burger Custom - geralmente remoções)
-                if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                    itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                    item.ingredients.forEach(ing => {
-                        const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                        itemDetails += `<li>- ${ing.name}${quantityText}</li>`;
-                    });
-                    itemDetails += '</ul>';
+                // 2. Pega ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
+                if (item.ingredients && item.ingredients.length > 0) {
+                    if (item.type === 'custom_burger') {
+                        // Trata como ingredientes de hambúrguer (remoções)
+                        itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                        item.ingredients.forEach(ing => {
+                            const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                            itemDetails += `<li>- ${ing.name}${quantityText}</li>`;
+                        });
+                        itemDetails += '</ul>';
+                    } else {
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
+                        if (!item.extras || item.extras.length === 0) { 
+                            itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                            item.ingredients.forEach(extra => {
+                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                                const placementText = extra.placement ? ` (${extra.placement})` : '';
+                                itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                            });
+                            itemDetails += '</ul>';
+                        }
+                    }
                 }
 
                 return `<li class="text-sm">
@@ -1437,7 +1451,7 @@ const firebaseConfig = {
             // INÍCIO DA ALTERAÇÃO - createDetailedOrderCardHtml
             // ========================================================================
             //
-            // Lógica atualizada para ler 'item.extras' (do balcão) ou
+            // Lógica atualizada para ler 'item.extras' (do balcão) E
             // 'item.ingredients' (do cardápio online) para mostrar os adicionais
             // no modal de gerenciamento de mesa.
             //
@@ -1447,11 +1461,10 @@ const firebaseConfig = {
              let itemsHtml = orderItems.map(item => {
                 let itemDetails = '';
                 
-                // 1. Pega adicionais (Balcão usa 'extras', Cardápio online usa 'ingredients' para pizza)
-                const adicionais = item.extras || (item.ingredients && item.type !== 'custom_burger' ? item.ingredients : []);
-                if (adicionais && adicionais.length > 0) {
+                // 1. Pega adicionais (pizzas/itens) do Balcão
+                if (item.extras && item.extras.length > 0) {
                     itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                    adicionais.forEach(extra => {
+                    item.extras.forEach(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
                         const placementText = extra.placement ? ` (${extra.placement})` : '';
                         itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
@@ -1459,14 +1472,29 @@ const firebaseConfig = {
                     itemDetails += '</ul>';
                 }
 
-                // 2. Pega ingredientes (Burger Custom)
-                if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                    itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
-                    item.ingredients.forEach(ing => {
-                        const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                        itemDetails += `<li>- ${ing.name}${quantityText}</li>`;
-                    });
-                    itemDetails += '</ul>';
+                // 2. Pega ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
+                if (item.ingredients && item.ingredients.length > 0) {
+                    if (item.type === 'custom_burger') {
+                        // Trata como ingredientes de hambúrguer (remoções)
+                        itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                        item.ingredients.forEach(ing => {
+                            const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                            itemDetails += `<li>- ${ing.name}${quantityText}</li>`;
+                        });
+                        itemDetails += '</ul>';
+                    } else {
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
+                        if (!item.extras || item.extras.length === 0) {
+                            itemDetails += '<ul class="text-xs text-gray-500 pl-4 list-disc">';
+                            item.ingredients.forEach(extra => {
+                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                                const placementText = extra.placement ? ` (${extra.placement})` : '';
+                                itemDetails += `<li>+ ${extra.name}${quantityText}${placementText}</li>`;
+                            });
+                            itemDetails += '</ul>';
+                        }
+                    }
                 }
 
                 return `<li class="text-sm">
@@ -1844,9 +1872,8 @@ const firebaseConfig = {
         // INÍCIO DA ALTERAÇÃO - Função printOrderContent
         // ========================================================================
         //
-        // Lógica de impressão alterada para usar window.open() e
-        // lógica da função generateItemHtml atualizada para ler
-        // 'item.extras' OU 'item.ingredients'
+        // Lógica da função generateItemHtml atualizada para ler
+        // 'item.extras' (Balcão) E 'item.ingredients' (Cardápio Online)
         //
         // ========================================================================
         // -->
@@ -1905,26 +1932,34 @@ const firebaseConfig = {
                 
                 // --- INÍCIO DA CORREÇÃO ---
         
-                // 1. Adicionais (pizzas/itens do balcão OU pizzas do cardápio online)
-                //    Balcão usa 'extras'. Cardápio online usa 'ingredients' (e não é 'custom_burger').
-                const adicionais = item.extras || (item.ingredients && item.type !== 'custom_burger' ? item.ingredients : []);
-
-                if (adicionais && adicionais.length > 0) {
-                    itemString += `<ul>${adicionais.map(extra => {
+                // 1. Adicionais (pizzas/itens) do Balcão
+                if (item.extras && item.extras.length > 0) {
+                    itemString += `<ul>${item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
                         const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
                         return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
                     }).join('')}</ul>`;
                 }
                 
-                // 2. Ingredientes (Hambúrgueres Custom - geralmente remoções)
-                //    Ambos os sistemas parecem usar 'ingredients' e 'type === custom_burger' para isso.
-                if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                     itemString += `<ul>${item.ingredients.map(ing => {
-                         const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                         // Assumindo que 'ingredients' em custom_burger são sempre remoções (como no index.html)
-                         return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
-                     }).join('')}</ul>`;
+                // 2. Ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
+                if (item.ingredients && item.ingredients.length > 0) {
+                    if (item.type === 'custom_burger') {
+                         // Trata como ingredientes de hambúrguer (remoções)
+                         itemString += `<ul>${item.ingredients.map(ing => {
+                             const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                             return `<li class="item-details"><strong>- ${ing.name}${quantityText}</strong></li>`;
+                         }).join('')}</ul>`;
+                    } else {
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
+                        if (!item.extras || item.extras.length === 0) {
+                            itemString += `<ul>${item.ingredients.map(extra => {
+                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                                const placementText = extra.placement ? ` (${extra.placement})` : ''; // Garante que 'placement' não dê erro
+                                return `<li class="item-details"><strong>+ ${extra.name}${quantityText}${placementText}</strong></li>`;
+                            }).join('')}</ul>`;
+                        }
+                    }
                 }
                 
                 // --- FIM DA CORREÇÃO ---
@@ -2746,24 +2781,51 @@ const firebaseConfig = {
             const itemsText = (Array.isArray(order.itens) ? order.itens : []).map(item => {
                 let itemString = `  • ${item.name || 'Item'}: R$ ${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}`;
                 
-                // --- INÍCIO DA CORREÇÃO (WhatsApp) ---
-                // Mesma lógica da impressão: checa 'extras' ou 'ingredients'
-                const adicionais = item.extras || (item.ingredients && item.type !== 'custom_burger' ? item.ingredients : []);
-                if (adicionais && adicionais.length > 0) {
-                    itemString += '\n' + adicionais.map(extra => {
+                // <!--
+                // ========================================================================
+                // INÍCIO DA ALTERAÇÃO - formatWhatsappMessage
+                // ========================================================================
+                //
+                // Aplicada a mesma lógica de 'extras' e 'ingredients' para a
+                // mensagem do WhatsApp.
+                //
+                // ========================================================================
+                // -->
+                
+                // 1. Pega adicionais (pizzas/itens) do Balcão
+                if (item.extras && item.extras.length > 0) {
+                    itemString += '\n' + item.extras.map(extra => {
                         const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
                         const placementText = extra.placement ? ` (${extra.placement})` : '';
                         return `    *+ ${extra.name}${quantityText}${placementText}*`;
                     }).join('\n');
                 }
                 
-                if (item.type === 'custom_burger' && item.ingredients && item.ingredients.length > 0) {
-                     itemString += '\n' + item.ingredients.map(ing => {
-                         const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
-                         return `    *- ${ing.name}${quantityText}*`;
-                     }).join('\n');
+                // 2. Pega ingredientes (Burger Custom OU Adicionais de Pizza do Cardápio Online)
+                if (item.ingredients && item.ingredients.length > 0) {
+                    if (item.type === 'custom_burger') {
+                         // Trata como ingredientes de hambúrguer (remoções)
+                         itemString += '\n' + item.ingredients.map(ing => {
+                             const quantityText = (ing.quantity && ing.quantity > 1) ? ` (x${ing.quantity})` : '';
+                             return `    *- ${ing.name}${quantityText}*`;
+                         }).join('\n');
+                    } else {
+                        // Trata como adicionais de pizza (adições) - do Cardápio Online
+                        // Adicionado um 'else if' para não duplicar se 'extras' já foi pego
+                        if (!item.extras || item.extras.length === 0) {
+                            itemString += '\n' + item.ingredients.map(extra => {
+                                const quantityText = (extra.quantity && extra.quantity > 1) ? ` (x${extra.quantity})` : '';
+                                const placementText = extra.placement ? ` (${extra.placement})` : '';
+                                return `    *+ ${extra.name}${quantityText}${placementText}*`;
+                            }).join('\n');
+                        }
+                    }
                 }
-                // --- FIM DA CORREÇÃO (WhatsApp) ---
+                // <!--
+                // ========================================================================
+                // FIM DA ALTERAÇÃO - formatWhatsappMessage
+                // ========================================================================
+                // -->
                 
                 return itemString;
             }).join('\n');
