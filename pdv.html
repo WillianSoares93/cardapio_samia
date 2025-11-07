@@ -1391,8 +1391,6 @@ const firebaseConfig = {
             } else {
                  addressHtml = `<p class="text-xs text-red-500">Erro: Endereço não encontrado.</p>`;
             }
-
-
             card.innerHTML = `
                 ${newTagHtml}
                 <div class="card-header flex justify-between items-start cursor-pointer p-4">
@@ -1436,8 +1434,6 @@ const firebaseConfig = {
 
             return card;
         }
-
-
         function createDetailedOrderCardHtml(order, id) {
              const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
              const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
@@ -1873,24 +1869,32 @@ const firebaseConfig = {
         // ========================================================================
         // -->
         function printOrderContent(order, id, type) {
+            // *** INÍCIO DA CORREÇÃO DE IMPRESSÃO ***
+            // Estes estilos forçam a impressora térmica a usar o modo "rolo"
+            // e definem a largura correta (80mm ou 58mm).
             const styles = `
                 <style>
                     @media print {
                         @page { 
                             margin: 0; 
-                            size: 58mm auto; /* Tenta forçar o tamanho do papel */
+                            /* Tenta forçar 80mm, ajuste para 58mm se sua impressora for menor */
+                            size: 80mm auto; 
                         } 
                         html, body {
-                            width: 80mm !important; /* Largura da impressora térmica */
-                            height: auto !important; /* Altura automática para conteúdo contínuo */
-                            min-height: initial !important; /* Reseta min-height */
+                            /* Largura da impressora térmica */
+                            width: 80mm !important; 
+                            /* Altura automática para conteúdo contínuo */
+                            height: auto !important; 
+                            min-height: initial !important; 
                             margin: 0;
-                            padding: 5mm; /* Margem interna do papel */
+                            /* Margem interna do papel */
+                            padding: 5mm; 
                             font-family: 'Courier New', Courier, monospace;
                             font-size: 10pt;
                             color: #000;
                             background-color: #fff;
-                            overflow: visible !important; /* Garante que nada seja cortado */
+                            /* Garante que nada seja cortado */
+                            overflow: visible !important; 
                         }
                         * {
                             font-family: 'Courier New', Courier, monospace;
@@ -1910,6 +1914,7 @@ const firebaseConfig = {
                     }
                 </style>
             `;
+            // *** FIM DA CORREÇÃO DE IMPRESSÃO ***
 
             let printContent = '';
             // Garantir que order.itens seja um array
@@ -2152,12 +2157,13 @@ const firebaseConfig = {
 
 
         function printCashClosure() {
+            // *** INÍCIO DA CORREÇÃO DE IMPRESSÃO ***
             const styles = `
                 <style>
                     @media print {
                         @page { 
                             margin: 0; 
-                            size: 58m auto; 
+                            size: 80mm auto; /* Força 80mm */
                         } 
                         html, body {
                             width: 80mm !important;
@@ -2184,6 +2190,7 @@ const firebaseConfig = {
                     }
                 </style>
             `;
+            // *** FIM DA CORREÇÃO DE IMPRESSÃO ***
 
             const initial = document.getElementById('summary-initial').textContent;
             const delivery = document.getElementById('summary-delivery').textContent;
