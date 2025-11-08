@@ -1322,7 +1322,7 @@ const firebaseConfig = {
             // FIM DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             // -->
-            const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
+        const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
             const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
 
             let buttonHtml = '';
@@ -1886,8 +1886,8 @@ const firebaseConfig = {
                             height: auto !important; 
                             min-height: initial !important; 
                             margin: 0;
-                            /* Margem interna do papel */
-                            padding: 5mm; 
+                            /* Margem interna do papel - REDUZIDA */
+                            padding: 2mm; 
                             font-family: 'Courier New', Courier, monospace;
                             /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
@@ -2176,7 +2176,8 @@ const firebaseConfig = {
                             height: auto !important;
                             min-height: initial !important;
                             margin: 0;
-                            padding: 5mm;
+                            /* Margem interna do papel - REDUZIDA */
+                            padding: 2mm;
                             font-family: 'Courier New', Courier, monospace;
                             /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
@@ -2908,6 +2909,7 @@ Seu pedido já está sendo preparado! 😊
         closeWhatsappModalBtn.addEventListener('click', () => {
             whatsappConfirmModal.style.display = 'none';
         });
+
 
     </script>
 </body>
