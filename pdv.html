@@ -1322,7 +1322,6 @@ const firebaseConfig = {
             // FIM DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             // -->
-
             const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
             const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
 
@@ -1890,15 +1889,22 @@ const firebaseConfig = {
                             /* Margem interna do papel */
                             padding: 5mm; 
                             font-family: 'Courier New', Courier, monospace;
+                            /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
-                            color: #000;
+                            font-weight: bold !important;
+                            color: #000 !important;
+                            /* FIM DA ALTERAÇÃO */
                             background-color: #fff;
                             /* Garante que nada seja cortado */
                             overflow: visible !important; 
                         }
                         * {
                             font-family: 'Courier New', Courier, monospace;
+                            /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
+                            font-weight: bold !important;
+                            color: #000 !important;
+                            /* FIM DA ALTERAÇÃO */
                         }
                         h1 { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 5px;}
                         h2 { font-size: 12pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 2px;}
@@ -1906,8 +1912,8 @@ const firebaseConfig = {
                         ul { list-style: none; padding: 0; margin: 0; }
                         li { margin-bottom: 2px; }
                         .item-line { display: flex; justify-content: space-between; }
-                        .item-details { padding-left: 15px; font-size: 9pt; color: #333; }
-                        .item-details strong { font-size: 9pt; color: #000; } 
+                        .item-details { padding-left: 15px; font-size: 9pt; } /* Cor removida, herda do '*' */
+                        .item-details strong { font-size: 9pt; } /* Cor removida, herda do '*' */
                         hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
                         .text-right { text-align: right; }
                         .font-bold { font-weight: bold; }
@@ -2172,14 +2178,21 @@ const firebaseConfig = {
                             margin: 0;
                             padding: 5mm;
                             font-family: 'Courier New', Courier, monospace;
+                            /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
-                            color: #000;
+                            font-weight: bold !important;
+                            color: #000 !important;
+                            /* FIM DA ALTERAÇÃO */
                             background-color: #fff;
                             overflow: visible !important;
                         }
                         * {
                             font-family: 'Courier New', Courier, monospace;
+                            /* ALTERAÇÃO: Força a cor preta e negrito */
                             font-size: 10pt;
+                            font-weight: bold !important;
+                            color: #000 !important;
+                            /* FIM DA ALTERAÇÃO */
                         }
                         h1 { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 10px;}
                         h2 { font-size: 12pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px dashed #000; padding-bottom: 2px;}
@@ -2895,7 +2908,6 @@ Seu pedido já está sendo preparado! 😊
         closeWhatsappModalBtn.addEventListener('click', () => {
             whatsappConfirmModal.style.display = 'none';
         });
-
 
     </script>
 </body>
