@@ -2806,7 +2806,7 @@ const firebaseConfig = {
         function formatWhatsappMessage(order) {
             // **CORREÇÃO:** Usar optional chaining e valores padrão
             const itemsText = (Array.isArray(order.itens) ? order.itens : []).map(item => {
-                let itemString = `  • ${item.name || 'Item'}: R$ ${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}`;
+                let itemString = `  * ${item.name || 'Item'}: R$ ${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}`;
                 
                 // <!--
                 // ========================================================================
