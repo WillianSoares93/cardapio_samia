@@ -1322,7 +1322,7 @@ const firebaseConfig = {
             // FIM DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             // -->
-            const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
+        const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
             const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
 
             let buttonHtml = '';
@@ -1935,7 +1935,8 @@ const firebaseConfig = {
                 if (includePrice) {
                     itemString = `<li class="item-line"><span>${item.name || 'Item desconhecido'}</span><span>R$${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}</span></li>`;
                 } else {
-                    itemString = `<li><strong>•</strong> ${item.name || 'Item desconhecido'}</li>`;
+                    // ALTERAÇÃO: Removido o '•'
+                    itemString = `<li>${item.name || 'Item desconhecido'}</li>`;
                 }
                 
                 // --- INÍCIO DA CORREÇÃO ---
@@ -2664,8 +2665,8 @@ const firebaseConfig = {
                 const modal = document.getElementById('delete-confirm-modal');
                 const titleEl = modal.querySelector('h3');
                 const messageEl = modal.querySelector('p');
-                const yesBtn = modal.querySelector('#confirm-delete-btn');
-                const noBtn = modal.querySelector('#cancel-delete-btn');
+                const yesBtn = document.getElementById('confirm-delete-btn');
+                const noBtn = document.getElementById('cancel-delete-btn');
 
                 const originalTitle = titleEl.textContent;
                 const originalYesText = yesBtn.textContent;
