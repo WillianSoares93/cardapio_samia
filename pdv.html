@@ -1935,7 +1935,7 @@ const firebaseConfig = {
                 if (includePrice) {
                     itemString = `<li class="item-line"><span>${item.name || 'Item desconhecido'}</span><span>R$${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}</span></li>`;
                 } else {
-                    // ALTERAÇÃO: Removido o '•'
+                    // ALTERAÇÃO: Removido o '•' e a tag <strong>
                     itemString = `<li>${item.name || 'Item desconhecido'}</li>`;
                 }
                 
@@ -1998,6 +1998,9 @@ const firebaseConfig = {
                     <hr>
                     ${kitchenHtml}
                     ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
+                    <br>
+                    <p>================================</p>
+                    <p style="text-align: center;">FIM</p>
                 `;
             } else { // type === 'client'
                 // Lógica do Cliente (COM categorias, COM preços)
@@ -2040,6 +2043,9 @@ const firebaseConfig = {
                     </div>
                      ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
                      ${paymentDetailsHtml}
+                    <br>
+                    <p>================================</p>
+                    <p style="text-align: center;">FIM</p>
                 `;
             }
 
@@ -2250,6 +2256,9 @@ const firebaseConfig = {
                 <div class="line font-bold"><span>ESPERADO EM CAIXA:</span><span>${expected}</span></div>
                 <div class="line"><span>Valor Contado:</span><span>R$ ${parseFloat(finalValue || 0).toFixed(2).replace('.',',')}</span></div>
                 <div class="line font-bold"><span>DIFERENÇA:</span><span>${difference}</span></div>
+                <br>
+                <p>================================</p>
+                <p style="text-align: center;">FIM</p>
             `;
 
             // Lógica de impressão com window.open()
