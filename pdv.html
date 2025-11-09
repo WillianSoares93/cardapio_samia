@@ -1322,7 +1322,7 @@ const firebaseConfig = {
             // FIM DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             // -->
-        const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
+            const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
             const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
 
             let buttonHtml = '';
@@ -1998,9 +1998,9 @@ const firebaseConfig = {
                     <hr>
                     ${kitchenHtml}
                     ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
+                    <br>
                     <p>=========================================</p>
                     <p style="text-align: center;">FIM</p>
-                     <br>
                 `;
             } else { // type === 'client'
                 // Lógica do Cliente (COM categorias, COM preços)
@@ -2043,9 +2043,9 @@ const firebaseConfig = {
                     </div>
                      ${order.observacao ? `<hr><h2>OBSERVAÇÕES</h2><p>${order.observacao}</p>` : ''}
                      ${paymentDetailsHtml}
+                    <br>
                     <p>=========================================</p>
                     <p style="text-align: center;">FIM</p>
-                    <br>
                 `;
             }
 
@@ -2256,9 +2256,9 @@ const firebaseConfig = {
                 <div class="line font-bold"><span>ESPERADO EM CAIXA:</span><span>${expected}</span></div>
                 <div class="line"><span>Valor Contado:</span><span>R$ ${parseFloat(finalValue || 0).toFixed(2).replace('.',',')}</span></div>
                 <div class="line font-bold"><span>DIFERENÇA:</span><span>${difference}</span></div>
+                <br>
                 <p>=========================================</p>
                 <p style="text-align: center;">FIM</p>
-                <br>
             `;
 
             // Lógica de impressão com window.open()
@@ -2806,7 +2806,7 @@ const firebaseConfig = {
         function formatWhatsappMessage(order) {
             // **CORREÇÃO:** Usar optional chaining e valores padrão
             const itemsText = (Array.isArray(order.itens) ? order.itens : []).map(item => {
-                let itemString = `  * ${item.name || 'Item'}: R$ ${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}`;
+                let itemString = `  • ${item.name || 'Item'}: R$ ${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}`;
                 
                 // <!--
                 // ========================================================================
