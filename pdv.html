@@ -1322,7 +1322,7 @@ const firebaseConfig = {
             // FIM DA ALTERAÇÃO - createOrderCard
             // ========================================================================
             // -->
-        const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
+            const createdAtTimestamp = order.criadoEm && order.criadoEm.toMillis ? order.criadoEm.toMillis() : Date.now();
             const statusChangedAtTimestamp = order.statusChangedAt && order.statusChangedAt.toMillis ? order.statusChangedAt.toMillis() : createdAtTimestamp;
 
             let buttonHtml = '';
@@ -1935,7 +1935,7 @@ const firebaseConfig = {
                 if (includePrice) {
                     itemString = `<li class="item-line"><span>${item.name || 'Item desconhecido'}</span><span>R$${parseFloat(item.price || 0).toFixed(2).replace('.', ',')}</span></li>`;
                 } else {
-                    itemString = `<li><strong>1x</strong> ${item.name || 'Item desconhecido'}</li>`;
+                    itemString = `<li><strong>•</strong> ${item.name || 'Item desconhecido'}</li>`;
                 }
                 
                 // --- INÍCIO DA CORREÇÃO ---
